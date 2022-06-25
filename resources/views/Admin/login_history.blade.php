@@ -26,11 +26,11 @@
                                     <tbody>
                                     @foreach($monitoringData as $monitoring)
                                         <tr>
-                                            <td>{{$monitoring['user']['name']}} </td>
+                                            <td>{{$monitoring['name']}} </td>
                                             <td>{{$monitoring['last_login']}}</td>
                                             <td>{{$monitoring['last_logout']?$monitoring['last_logout']:'NULL'}}</td>
-                                            <td>{{$monitoring['created_at']}}</td>
-                                            <td>{{$monitoring['updated_at']}}</td>
+                                            <td>{{ date('H:i:s',strtotime($monitoring['total_seven_time']))}}</td>
+                                            <td>{{ date('H:i:s',strtotime($monitoring['total_thirty_time']))}}</td>
                                         </tr>
                                     @endforeach
                                     </tbody>

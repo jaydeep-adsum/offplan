@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\LeadClient;
 use App\Models\Monitorization;
+use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Contracts\View\Factory;
 use Illuminate\Http\Request;
 use App\Models\ManageListings;
 use App\Models\Developer;
@@ -14,6 +16,7 @@ use App\Models\User;
 use Carbon;
 use Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\View\View;
 
 class HomeController extends Controller
 {
@@ -82,39 +85,27 @@ class HomeController extends Controller
         return ( Auth::user()->role == 3);
     }
 
+    /**
+     * @param Request $request
+     * @return Application|Factory|View
+     */
     public function loginHistory(Request $request)
     {
         $seven_days = \Carbon\Carbon::today()->subDays(7);
         $thirty_days = \Carbon\Carbon::today()->subDays(30);
+        $now = \Carbon\Carbon::today();
         $sum = strtotime('00:00:00');
-        $totaltime = 0;
-        $arr = [];
 
-        $monitoringArr = Monitorization::select('login_time','user_id','last_login','last_logout')->where('created_at', '>=', $seven_days)->where('login_time','!=','null')->toSql();
-dd($monitoringArr);
-        $result = array();
+        $monitoringData= [];
+        $monitoringArr = DB::select("SELECT m.*,users.name,(SELECT SEC_TO_TIME(SUM(TIME_TO_SEC(m1.`login_time`))) as total_login_time from monitorization m1 where m1.user_id = m.user_id AND `created_at` BETWEEN '".$seven_days."' AND '".$now."') as total_seven_time,(SELECT SEC_TO_TIME(SUM(TIME_TO_SEC(m1.`login_time`))) as total_login_time from monitorization m1 where m1.user_id = m.user_id AND `created_at` BETWEEN '".$thirty_days."' AND '".$now."') as total_thirty_time FROM `monitorization` m LEFT JOIN users
+    ON users.id = m.user_id WHERE m.id in (select max(m2.id) from monitorization m2 group by m2.user_id) ORDER BY `m`.`id` DESC;");
 
-        foreach($monitoringArr as $key=>$element) {
-//            $timeinsec = strtotime($element['login_time']) - $sum;
-//            $totaltime = $totaltime + $timeinsec;
-            if ($element['user_id']==$element['user_id']) {
-                $arr[$element['user_id']][$key] = $element;
-            }
-//
+        foreach($monitoringArr as $object)
+        {
+            $monitoringData[] = (array)$object;
         }
-        ksort($arr, SORT_NUMERIC);
-        dd($arr);
-        $arr_1=[];
-        foreach ($arr as $id=>$a){
-            $arr_1[$id] =$a;
-        }
-        dd($arr_1);
-        $h = intval($totaltime / 3600);
-        $totaltime = $totaltime - ($h * 3600);
-        $m = intval($totaltime / 60);
-        $s = $totaltime - ($m * 60);
-dd($h,$s,$m);
-//                return view('Admin.login_history',compact('monitoringData'));
+
+       return view('Admin.login_history',compact('monitoringData'));
         }
 
 

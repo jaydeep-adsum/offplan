@@ -28,7 +28,7 @@
                     </a>
                 </li>
                     <li class="nav-item">
-                        <a href="#" class="nav-link @if(Request::is('login-history*')) active @endif ">
+                        <a href="{{route('loginHistory')}}" class="nav-link @if(Request::is('login-history*')) active @endif ">
                             <i class="nav-icon fa fa-history"></i>
                             <p>
                                 Login History
