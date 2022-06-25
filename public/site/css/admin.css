@@ -1,0 +1,14 @@
+
+.heading{
+	font-size: 65px;
+	margin-top: 25px;
+}
+.add-user{
+	margin-left: 30px;
+	margin-top: 10px;
+}
+.logout{
+	float: right;
+	margin-right: 30px;
+	margin-top: 10px;
+}

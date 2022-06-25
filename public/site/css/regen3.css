@@ -1,0 +1,39 @@
+.slider-img{
+    height: 400px;
+}
+.feature{
+    column-count: 2;
+}
+.fea{
+    column-span: all;
+}
+.print{
+    padding-top: 25px;
+    padding-bottom: 25px;
+}
+.footer{
+    background-color: black;
+    padding-bottom: 40px;
+    padding-top: 40px;
+    color: white;
+}
+.footer-address ul {
+    list-style-type: none;
+}
+.footer-social li{
+  display: inline-block;
+  float: left;
+}
+.footer-social-icon{
+  text-align: center;
+  display: inline-block;
+  line-height: 170px;
+  margin-right: 10px;
+  font-size: 35px;
+}
+.footer-social-icon a{
+  color: white;
+}
+.footer-social-icon a:hover{
+  color: rgb(236, 73, 73);
+}

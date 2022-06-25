@@ -1,0 +1,49 @@
+.upload-image{
+    width:150px;
+    float: left;
+    margin-top:25px;
+    position: relative;
+}
+#image_preview{
+    clear: both;
+}
+.upload-image img{
+    width:100%;
+}
+.remove {
+    position: absolute;
+    top: 0;
+    right: 5px;
+    height: 20px;
+    width: 20px;
+    line-height: 14px !important;
+    border-radius: 50% !important;
+    font-size: 20px !important;
+    padding: 0 !important;
+    font-weight: 600 !important;
+  }
+.remove:hover {
+  background: white;
+  color: black;
+}
+.intro{
+  width: 240px;
+  height: 240px;
+  margin-right: 20px;
+}
+.show_hide{
+  display: none;
+}
+
+.upload-image-floor{
+  width:150px;
+  float: left;
+  margin-top:25px;
+  position: relative;
+}
+#floorplanimage_preview{
+  clear: both;
+}
+.upload-image-floor img{
+  width:100%;
+}

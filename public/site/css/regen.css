@@ -1,0 +1,128 @@
+a:hover{
+    cursor: pointer;
+}
+.header{
+    background-color: black;
+}
+.logo img{
+    max-width: 100%;
+    width: 50px;
+}
+.navbar-nav .nav-item{
+    margin-left: 20px;
+}
+.navbar-nav .nav-item .nav-link{
+    color:white;
+    font-size: 25px;
+}
+.navbar-nav .nav-item .nav-link:hover{
+    color: rgb(236, 73, 73);
+}
+.slide-img{
+    height: 550px;
+}
+.thumb img{
+    width: 35px;
+    height: 30px;
+    margin-top: 20px;
+}
+.about{
+    font-size: 50px;
+    font-weight: 500;
+    padding:0;
+}
+/* .aboutus{
+    background-image: linear-gradient(rgba(0,0,0,0.5),rgba(0,0,0,0.5)),url('https://ak.picdn.net/shutterstock/videos/6934822/thumb/1.jpg');
+	background-size: cover;
+	background-position: center;
+	color: #efefef;
+	background-attachment: fixed;
+	padding-top: 40px;
+	padding-bottom: 50px;
+} */
+.aboutimg img{
+    width: 200px;
+    object-fit: cover;
+}
+.title{
+    font-size: 25px;
+}
+.text{
+    font-size: 20px;
+}
+.description{
+    padding-top: 30px;
+    padding-bottom: 30px;
+}
+.ack{
+    margin-top: 40px;
+    font-size: 40px;
+    font-weight: 700;
+    margin-bottom: 30px;
+}
+.acknowledge{
+    font-size: 18px;
+}
+.property-feature{
+    padding-bottom: 30px;
+}
+.pro-feature{
+    font-size: 40px;
+    font-weight: 700;
+    margin-bottom: 30px;
+}
+.location{
+    padding-bottom: 40px;
+    padding-top: 40px;
+}
+.view-location{
+    font-size: 40px;
+    font-weight: 700;
+}
+.map{
+    margin-bottom: 30px;
+}
+.venue-map iframe {
+    width: 100%;
+    height: 100%;
+    min-height: 300px;
+  }
+  .desc{
+      padding-top:30px;
+      padding-bottom: 30px;
+  }
+  .desclaimer{
+    font-size: 40px;
+    font-weight: 700;
+    margin-bottom: 30px;
+  }
+  .print{
+      padding-top: 25px;
+      padding-bottom: 25px;
+  }
+  .footer{
+      background-color: black;
+      padding-bottom: 40px;
+      padding-top: 40px;
+      color: white;
+  }
+  .footer-address ul {
+      list-style-type: none;
+  }
+  .footer-social li{
+	display: inline-block;
+	float: left;
+}
+.footer-social-icon{
+    text-align: center;
+    display: inline-block;
+    line-height: 170px;
+    margin-right: 10px;
+    font-size: 35px;
+}
+.footer-social-icon a{
+    color: white;
+}
+.footer-social-icon a:hover{
+    color: rgb(236, 73, 73);
+}

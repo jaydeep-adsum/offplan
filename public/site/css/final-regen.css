@@ -1,0 +1,308 @@
+body {
+    background-color: #f3f3f3;
+}
+
+.card-image {
+    width: 90px;
+    height: 90px;
+    /*border-radius: 50px;*/
+}
+
+.side_card .list-group-item,
+.geryC {
+    background-color: #f7f7f7;
+}
+.geryC{
+    max-height:105px;
+}
+
+.category:not(:last-child) {
+    border-right: 2px solid #2FDAFF;
+}
+
+.category {
+    padding: 10px 0;
+}
+
+.icon {
+    width: 40px;
+    height: 40px;
+    line-height: 1.2;
+}
+
+.description {
+    border-bottom: 2px solid #2FDAFF;
+    width: 105px;
+}
+
+.details {
+    border-bottom: 2px solid #2FDAFF;
+    width: 65px;
+}
+
+.amount {
+    border-bottom: 2px solid #2FDAFF;
+    width: 173px;
+}
+
+.payment {
+    border-bottom: 2px solid #2FDAFF;
+    width: 148px;
+}
+
+.floor {
+    border-bottom: 2px solid #2FDAFF;
+    width: 93px;
+}
+
+.video {
+    border-bottom: 2px solid #2FDAFF;
+    width: 54px;
+}
+
+.pdf {
+    border-bottom: 2px solid #2FDAFF;
+    width: 116px;
+}
+
+.cool {
+    border: 2px solid rgb(232, 232, 232);
+}
+
+#feature {
+    display: none;
+}
+
+.pro-feature {
+    border-bottom: 2px solid #2FDAFF;
+    width: 163px;
+}
+
+.fUL {
+    column-count: 4
+}
+
+ul {
+    list-style: none;
+}
+
+.btn {
+    background-color: white;
+    color: #2FDAFF;
+    box-shadow: 0px 0px 1px 1px rgb(220, 219, 218);
+    font-weight: 500;
+}
+
+.btn:hover {
+    color: black;
+}
+
+.arrow {
+    background-color: white;
+    color: #636363;
+}
+
+
+/* .map iframe {
+    width: 100%;
+    height: 100%;
+    min-height: 300px;
+  } */
+.map-image {
+    width: 100%;
+}
+
+.desclaimer {
+    border-bottom: 2px solid #2FDAFF;
+    width: 100px;
+}
+
+a:hover {
+    cursor: pointer;
+}
+
+.card {
+    width: 100%;
+}
+
+.icon-div {
+    vertical-align: middle;
+    align-self: center;
+}
+
+.icon-div span {
+    height: 100%;
+}
+
+.slider {
+    position: relative;
+}
+
+.slider .owl-dots {
+    position: absolute;
+    bottom: 10px;
+    left: 0;
+    right: 0;
+}
+
+.slider .owl-nav {
+    position: absolute;
+    top: 50%;
+    left: 20px;
+    right: 20px;
+    transform: translateY(-50%);
+}
+
+.slider .owl-nav button.owl-prev,
+.slider .owl-nav button.owl-next {
+    float: left;
+    height: 50px;
+    width: 50px;
+    font-size: 45px;
+    line-height: 45px;
+    background: #747474;
+    border-radius: 50%;
+    font-weight: 600;
+    border: 0;
+    opacity: .5;
+    color: #fff;
+    outline: none;
+}
+
+.slider .owl-nav button.owl-prev:hover,
+.slider .owl-nav button.owl-next:hover {
+
+    background: #747474;
+    opacity: 1;
+}
+
+.slider .owl-nav button span {
+    height: 100%;
+    width: 100%;
+    display: inline-block;
+    text-align: center;
+}
+
+.slider .owl-nav button.owl-next {
+    float: right;
+}
+
+.card-image1 {
+    width: 70px;
+    height: 70px;
+    border-radius: 50px;
+}
+
+@media (min-width:1200px) {
+    /* .card{
+        width:17rem;
+    } */
+}
+
+@media (min-width:992px) and (max-width : 1200px) {
+
+    /* .card{
+        width:14rem;
+    } */
+    .icon {
+        width: 30px;
+        height: 30px;
+    }
+}
+
+@media (min-width:768px) and (max-width:992px) {
+    .heading {
+        font-size: 16px;
+    }
+
+    .cat {
+        font-size: 16px;
+    }
+
+    .icon {
+        width: 20px;
+        height: 20px;
+    }
+}
+
+@media (min-width:576px) and (max-width:768px) {
+
+    .slider .owl-nav button.owl-prev,
+    .slider .owl-nav button.owl-next {
+
+        height: 30px;
+        width: 30px;
+        font-size: 25px;
+        line-height: 25px;
+    }
+
+    .flag {
+        width: 75px;
+        height: 75px;
+    }
+
+    .fUL {
+        column-count: 2
+    }
+
+}
+
+@media (max-width:576px) {
+
+    .slider .owl-nav button.owl-prev,
+    .slider .owl-nav button.owl-next {
+
+        height: 30px;
+        width: 30px;
+        font-size: 25px;
+        line-height: 25px;
+    }
+
+    .heading {
+        font-size: 14px;
+    }
+
+    .cat {
+        font-size: 14px;
+    }
+
+    .cat1 {
+        font-size: 12px;
+    }
+
+    .icon {
+        width: 35px;
+        height: 35px;
+    }
+
+    .footer {
+        font-size: 16px;
+    }
+
+    .footer1 {
+        font-size: 14px;
+    }
+
+    .fUL {
+        column-count: 1
+    }
+
+}
+
+@media(max-width:320px) {
+    .heading {
+        font-size: 14px;
+    }
+
+    .ruppes {
+        font-size: 16px;
+    }
+
+    .cat {
+        font-size: 12px;
+    }
+
+    .cat1 {
+        font-size: 10px;
+    }
+}

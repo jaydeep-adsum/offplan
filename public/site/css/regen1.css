@@ -1,0 +1,74 @@
+.slider-img{
+    height: 400px;
+}
+
+#info .nav-tabs {
+    text-align: center;
+    margin: auto;
+    display: block;
+    border-bottom: 0;
+    margin-bottom: 30px;
+  } 
+  #info .nav-tabs li {
+    display: inline-block;
+    margin-bottom: 0;
+  } 
+  #info .nav-tabs a {
+    border: none;
+    border-radius: 5px;
+    font-weight: 600;
+    background-color: #0e1b4d;
+    color: #fff;
+    padding: 10px 65px;
+  }
+  #info .nav-tabs a.active {
+    background-color: #f82249;
+    color: #fff;
+  }
+  .venue-map iframe {
+    width: 100%;
+    height: 100%;
+    min-height: 300px;
+  }
+  .roted{
+      transform: rotate(180deg);
+  }
+  .desc{
+    padding-top:30px;
+    padding-bottom: 30px;
+}
+.desclaimer{
+  font-size: 35px;
+  font-weight: 600;
+  margin-bottom: 30px;
+}
+.print{
+    padding-top: 25px;
+    padding-bottom: 25px;
+}
+.footer{
+    background-color: black;
+    padding-bottom: 40px;
+    padding-top: 40px;
+    color: white;
+}
+.footer-address ul {
+    list-style-type: none;
+}
+.footer-social li{
+  display: inline-block;
+  float: left;
+}
+.footer-social-icon{
+  text-align: center;
+  display: inline-block;
+  line-height: 170px;
+  margin-right: 10px;
+  font-size: 35px;
+}
+.footer-social-icon a{
+  color: white;
+}
+.footer-social-icon a:hover{
+  color: rgb(236, 73, 73);
+}

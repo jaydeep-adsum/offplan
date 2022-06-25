@@ -1,0 +1,130 @@
+.user{
+    width: 70px;
+}
+.desc{
+    background-color: rgb(63, 159, 223);
+    color: white;
+    width: 90px;
+    padding: 3px;
+    border-radius: 5px;
+    font-weight: 500;
+}
+.contact{
+    width: 70px;
+}
+.property{
+    width: 130px;
+}
+.price{
+    width: 90px;
+}
+.amount {
+    width: 150px;
+}
+.project-description{
+    background-color: rgb(63, 159, 223);
+    color: white;
+    width: 77px;
+    padding: 3px;
+    border-radius: 5px;
+    font-weight: 500;
+}
+
+.project-details{
+    background-color: rgb(63, 159, 223);
+    color: white;
+    width: 50px;
+    padding: 3px;
+    border-radius: 5px;
+    font-weight: 500;
+}
+
+.project-image{
+    background-color: rgb(63, 159, 223);
+    color: white;
+    width: 53px;
+    padding: 3px;
+    border-radius: 5px;
+    font-weight: 500;
+}
+
+.project-note{
+    background-color: rgb(63, 159, 223);
+    color: white;
+    width: 37px;
+    padding: 3px;
+    border-radius: 5px;
+    font-weight: 500;
+}
+
+.project-contact{
+    background-color: rgb(63, 159, 223);
+    color: white;
+    width: 57px;
+    padding: 3px;
+    border-radius: 5px;
+    font-weight: 500;
+}
+
+.project-property{
+    background-color: rgb(63, 159, 223);
+    color: white;
+    width: 108px;
+    padding: 3px;
+    border-radius: 5px;
+    font-weight: 500;
+}
+
+.project-video{
+    background-color: rgb(63, 159, 223);
+    color: white;
+    width: 42px;
+    padding: 3px;
+    border-radius: 5px;
+    font-weight: 500;
+}
+
+.project-attachments{
+    background-color: rgb(63, 159, 223);
+    color: white;
+    width: 86px;
+    padding: 3px;
+    border-radius: 5px;
+    font-weight: 500;
+}
+
+.project-payment{
+    background-color: rgb(63, 159, 223);
+    color: white;
+    width: 110px;
+    padding: 3px;
+    border-radius: 5px;
+    font-weight: 500;
+}
+
+.project-note{
+    background-color: rgb(63, 159, 223);
+    color: white;
+    width: 36px;
+    padding: 3px;
+    border-radius: 5px;
+    font-weight: 500;
+}
+
+.project-document-file{
+    background-color: rgb(63, 159, 223);
+    color: white;
+    width: 36px;
+    padding: 3px;
+    border-radius: 5px;
+    font-weight: 500;
+}
+
+.project-reminder{
+    background-color: rgb(63, 159, 223);
+    color: white;
+    width: 36px;
+    padding: 3px;
+    border-radius: 5px;
+    font-weight: 500;
+}
