@@ -283,9 +283,9 @@
                         <img class="mr-3 user" style="height: 60px" src="https://static.thenounproject.com/png/17241-200.png" >
                         <div class="media-body">
                             <h6 class="mt-0">{{ $manage_listings['developer']['company'] }}</h6>
-                            <p class="m-0">{{ $manage_listings['developer']['person'] }}</p>
-                            <p class="m-0">{{ $manage_listings['developer']['phone'] }}</p>
-                            <p class="m-0">{{ $manage_listings['developer']['email'] }}</p>
+                            <p class="m-0">{{ $manage_listings['user']['name'] }}</p>
+                            <p class="m-0">{{ $manage_listings['user']['phone'] }}</p>
+                            <p class="m-0">{{ $manage_listings['user']['email'] }}</p>
                         </div>
                       </div>
                 </div>

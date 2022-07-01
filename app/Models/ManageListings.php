@@ -25,6 +25,11 @@ class ManageListings extends Model
         return $this->belongsTo(Developer::class,'developer_id');
     }
 
+    public function user()
+    {
+        return $this->belongsTo(User::class,'user_id');
+    }
+
     public function paymentplan(){
         return $this->hasMany(Paymentplan::class,'project_id','id');
     }

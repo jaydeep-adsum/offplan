@@ -254,7 +254,6 @@
                 @php($class="")
                 @php($active="")
                 @endif
-                @if(Auth::user()->role!=3)
                 <li class="nav-item has-treeview {{$class}}">
                     <a href="#" class="nav-link {{$active}}">
                         <i class="nav-icon fas fa-building"></i>
@@ -274,7 +273,6 @@
                         </li>
                     </ul>
                 </li>
-                @endif
             </ul>
         </nav>
     </div>

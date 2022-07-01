@@ -57,6 +57,9 @@ class AgentController extends Controller
             if ($user) {
                 $userData = $user->toArray();
             }
+            if((Auth::user()->role == 3)){
+                return redirect()->back();
+            }
 
             return view('Admin.manage_agent',compact('userData'));
 

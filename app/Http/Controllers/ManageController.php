@@ -8,13 +8,14 @@ use App\Models\Features;
 use App\Models\Paymentplan;
 use App\Models\Milestones;
 use App\Models\Community;
+use App\Models\ProjectAssignAgents;
 use App\Models\Subcommunity;
 use App\Models\Categories;
 use App\Models\Note;
 use App\Models\User;
 use App\Models\Permission_role_mapping;
 use App\Models\UnitMultipleAttachment;
-use Carbon;
+use Carbon\Carbon;
 use Session;
 use Illuminate\Routing\Controller;
 use Illuminate\Http\JsonResponse;
@@ -369,7 +370,7 @@ class ManageController extends Controller
     {
         try {
             $developer = new Developer;
-            $mytime = Carbon\Carbon::now();
+            $mytime = Carbon::now();
             $developer = $developer->orderBy('company')->pluck('company', 'id');
 
 
@@ -409,7 +410,7 @@ class ManageController extends Controller
 
     public function previewunit($id)
     {
-        $manage_listings = ManageListings::with('developer', 'paymentplan', 'community', 'subcommunity')->where('id', $id)->first();
+        $manage_listings = ManageListings::with('developer', 'paymentplan', 'community', 'subcommunity','user')->where('id', $id)->first();
         $community = Community::orderBy('name')->where('id', $manage_listings->community)->get();
         $subcommunity = Subcommunity::orderBy('name')->where('id', $manage_listings->subcommunity)->get();
         $note = Note::where('proj_id', $id)->get();
@@ -615,7 +616,7 @@ class ManageController extends Controller
     public function editunit($id)
     {
         $developer = new Developer;
-        $mytime = Carbon\Carbon::now();
+        $mytime = Carbon::now();
         $developer = $developer->orderBy('company')->pluck('company', 'id');
         $developerData = [];
         if ($developer) {

@@ -51,10 +51,10 @@ class HomeController extends Controller
 
         $under_construction_projects = $projects;
         $ready_units = ManageListings::where(['ready_status' => 1 , 'sold_out_status' => 0])->count();
-        $sold_out_units = ManageListings::where(['sold_out_status' => 1])->count();
-        $project = $projects +$outdated_projects+ $sold_out_units;
+        $sold_out_projects = ManageProject::where(['sold_out_status' => '1'])->count();
+        $project = $projects +$outdated_projects+ $sold_out_projects;
 
-        return view('Admin.dashboard',compact('agents','developer','pending_contracts','projects','outdated_projects','under_construction_projects','ready_units','sold_out_units','project','associate'));
+        return view('Admin.dashboard',compact('agents','developer','pending_contracts','projects','outdated_projects','under_construction_projects','ready_units','sold_out_projects','project','associate'));
     }
     /**
      * This will chek user is superadmin or not
@@ -93,15 +93,11 @@ class HomeController extends Controller
     {
         $seven_days = \Carbon\Carbon::today()->subDays(7);
         $thirty_days = \Carbon\Carbon::today()->subDays(30);
-        $now = \Carbon\Carbon::today();
-        $sum = strtotime('00:00:00');
 
         $monitoringData= [];
-        $monitoringArr = DB::select("SELECT m.*,users.name,(SELECT SEC_TO_TIME(SUM(TIME_TO_SEC(m1.`login_time`))) as total_login_time from monitorization m1 where m1.user_id = m.user_id AND `created_at` BETWEEN '".$seven_days."' AND '".$now."') as total_seven_time,(SELECT SEC_TO_TIME(SUM(TIME_TO_SEC(m1.`login_time`))) as total_login_time from monitorization m1 where m1.user_id = m.user_id AND `created_at` BETWEEN '".$thirty_days."' AND '".$now."') as total_thirty_time FROM `monitorization` m LEFT JOIN users
-    ON users.id = m.user_id WHERE m.id in (select max(m2.id) from monitorization m2 group by m2.user_id) ORDER BY `m`.`id` DESC;");
+        $monitoringArr = DB::select("SELECT m.*,users.name,(SELECT SEC_TO_TIME(SUM(TIME_TO_SEC(m1.`login_time`))) as total_login_time from monitorization m1 where m1.user_id = m.user_id AND `created_at` >= '".$seven_days."') as total_seven_time,(SELECT SEC_TO_TIME(SUM(TIME_TO_SEC(m1.`login_time`))) as total_login_time from monitorization m1 where m1.user_id = m.user_id AND `created_at` >= '".$thirty_days."') as total_thirty_time FROM `monitorization` m LEFT JOIN users ON users.id = m.user_id WHERE m.id in (select max(m2.id) from monitorization m2 group by m2.user_id) ORDER BY `m`.`id` DESC;");
 
-        foreach($monitoringArr as $object)
-        {
+        foreach($monitoringArr as $object) {
             $monitoringData[] = (array)$object;
         }
 
