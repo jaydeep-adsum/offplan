@@ -19,7 +19,7 @@
         </div>
     </div>
     <div class="col mt-3 text-dark">
-        <a href="{{ route('view-unit', ['id' => $manage_listings['id']]) }}" style="font-size: 12px;" class="btn btn-success" target="_blank">Visit List Page</a>
+        <a href="{{ route('view-unit', ['id' => $manage_listings['id'],'userid'=>$encrypt_userid]) }}" style="font-size: 12px;" class="btn btn-success" target="_blank">Visit List Page</a>
         @if($permission)
             @if($permission->update)
                 @if(Request::is('preview-unit*'))

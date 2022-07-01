@@ -399,24 +399,39 @@ class ManageController extends Controller
         }
     }
 
-    public function viewproject($id)
+    public function viewproject($id,$userid)
     {
+        $encryption = "AES-128-CTR";
+        $env_length = openssl_cipher_iv_length($encryption);
+        $options   = 0;
+        $decryption_userid = '1234567890123456';
+        $decryption_key = "123456";
+        $user_id = openssl_decrypt($userid, $encryption, $decryption_key, $options, $decryption_userid);
+
         $manage_listings = ManageListings::with('developer','paymentplan')->where('id',$id)->first();
         $community=Community::orderBy('name')->where('id',$manage_listings->community)->get();
         $subcommunity=Subcommunity::orderBy('name')->where('id',$manage_listings->subcommunity)->get();
-        $user_data = User::where('id',$manage_listings->user_id)->first();
+        $user_data = User::where('id',$user_id)->first();
+
         return view('Admin.view_project',compact('manage_listings','community','subcommunity','user_data'));
     }
 
     public function previewunit($id)
     {
+        $encryption = "AES-128-CTR";
+        $env_length = openssl_cipher_iv_length($encryption);
+        $options   = 0;
+        $encryption_userid = '1234567890123456';
+        $encryption_key = "123456";
+        $user_id = Auth::id();
+        $encrypt_userid = openssl_encrypt($user_id, $encryption, $encryption_key, $options, $encryption_userid);
         $manage_listings = ManageListings::with('developer', 'paymentplan', 'community', 'subcommunity','user')->where('id', $id)->first();
         $community = Community::orderBy('name')->where('id', $manage_listings->community)->get();
         $subcommunity = Subcommunity::orderBy('name')->where('id', $manage_listings->subcommunity)->get();
         $note = Note::where('proj_id', $id)->get();
         $unitmultipleattachment = UnitMultipleAttachment::where('project_id', $id)->get();
         $permission = Permission_role_mapping::where('user_id', Auth::user()->id)->where('permissions_id', 5)->first();
-        return view('Admin.preview_project', compact('manage_listings', 'community', 'subcommunity', 'note', 'unitmultipleattachment', 'permission'));
+        return view('Admin.preview_project', compact('manage_listings', 'community', 'subcommunity', 'note', 'unitmultipleattachment', 'permission','encrypt_userid'));
     }
 
     public function submitunit(Request $request, $parentId = null)

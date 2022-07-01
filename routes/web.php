@@ -246,5 +246,5 @@ Route::post('getUnitNoteList','ManageController@getUnitNoteList')->name('getUnit
 
 	Route::get('excel/{id}','LeadClientController@export')->name('lead_report');
 });
-Route::get('view-project/{id}','ManageController@viewproject')->name('view-unit');
+Route::get('view-project/{id}/{userid}','ManageController@viewproject')->name('view-unit');
 Route::post('/mail/{id}','ManageController@mail')->name('mail-send');

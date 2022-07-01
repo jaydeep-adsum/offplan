@@ -39,6 +39,23 @@ class HomeController extends Controller
     {
         $mytime = Carbon\Carbon::now();
 
+        $ciphering = "AES-128-CTR";
+
+        $iv_length = openssl_cipher_iv_length($ciphering);
+        $options   = 0;
+
+        $encryption_iv = '1234567890123456';
+        $encryption_key = "123456";
+
+        $encryption = openssl_encrypt($simple_string, $ciphering, $encryption_key, $options, $encryption_iv);
+
+        $decryption_iv = '1234567890123456';
+        $decryption_key = "123456";
+
+        $decryption = openssl_decrypt($encryption, $ciphering, $decryption_key, $options, $decryption_iv);
+
+
+
         $agents = User::where('role',2)->count();
         $associate = User::where('role',3)->count();
         $developer = Developer::where('date', '>=', $mytime)->count();
