@@ -15,7 +15,7 @@ class LeadClient extends Model
      * @var array
      */
     protected $fillable = [
-        'name','email','phone','note','project_id','is_delete'
+        'name','email','phone','note','project_id','is_delete','user_id'
     ];
 
     public function notes(){

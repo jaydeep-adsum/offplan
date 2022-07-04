@@ -63,7 +63,7 @@ class ManageController extends Controller
                 $data = ManageListings::with('developer', 'notes', 'reminder', 'communitys', 'subcommunitys')->where(['ready_status' => 0, 'sold_out_status' => 0])->orderBy('updated_at', 'desc');
                 if (Auth::user()->role == 3) {
                     $past_date = Carbon::now()->subdays(90);
-                    $data->whereDate('updated_at', '<=', Carbon::now())->whereDate('updated_at', '>=', $past_date);
+                    $data->where('updated_at', '>=', $past_date);
                 }
             } else if ($request->status == 'ready_listing') {
                 $data = ManageListings::with('developer', 'notes', 'reminder', 'communitys', 'subcommunitys')->where(['ready_status' => 1, 'sold_out_status' => 0])->orderBy('updated_at', 'desc');

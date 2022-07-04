@@ -8,13 +8,19 @@ use Illuminate\Http\Request;
 use App\Models\LeadClient;
 use App\Models\ManageListings;
 use App\Exports\BulkExport;
+use Illuminate\Support\Facades\Auth;
 use Maatwebsite\Excel\Facades\Excel;
 
 class LeadClientController extends Controller
 {
     public function index()
     {
-        $data = LeadClient::get();
+        if(Auth::user()->role==3){
+            $data = LeadClient::where('user_id',Auth::id())->get();
+        } else{
+            $data = LeadClient::get();
+        }
+
 
         return view('Admin.manage_lead_client', compact('data'));
     }
@@ -45,7 +51,7 @@ class LeadClientController extends Controller
         if (array_key_exists('project_id', $input)) {
             $input['project_id'] = json_encode($input['project_id']);
         }
-
+        $input['user_id'] = Auth::id();
         $lead = LeadClient::create($input);
         if ($lead) {
             $response['status'] = 1;
