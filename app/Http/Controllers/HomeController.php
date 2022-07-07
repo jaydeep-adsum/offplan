@@ -44,17 +44,22 @@ class HomeController extends Controller
         $developer = Developer::where('date', '>=', $mytime)->count();
         $pending_contracts = Developer::where('date', '<=', $mytime)->count();
         $projects = ManageProject::where(['ready_status' => 0, 'sold_out_status' => 0])->count();
-
+        $past_date = \Carbon\Carbon::now()->subdays(90);
+        $underConstructionUnit = ManageListings::where(['ready_status' => 0, 'sold_out_status' => 0])->where('updated_at', '>=', $past_date)->count();
         $outdated_projects = ManageProject::whereHas('projectReminders',function($query){
             $query->whereDate('reminder_date','<=',Carbon\Carbon::now('Europe/Stockholm'))->where('status',0);
         })->count();
 
         $under_construction_projects = $projects;
-        $ready_units = ManageListings::where(['ready_status' => 1 , 'sold_out_status' => 0])->count();
+        if (Auth::user()->role == 3) {
+            $ready_units = ManageListings::where(['ready_status' => 1 , 'sold_out_status' => 0])->where('updated_at', '>=', $past_date)->count();
+        } else {
+            $ready_units = ManageListings::where(['ready_status' => 1, 'sold_out_status' => 0])->count();
+        }
         $sold_out_projects = ManageProject::where(['sold_out_status' => '1'])->count();
         $project = $projects +$outdated_projects+ $sold_out_projects;
 
-        return view('Admin.dashboard',compact('agents','developer','pending_contracts','projects','outdated_projects','under_construction_projects','ready_units','sold_out_projects','project','associate'));
+        return view('Admin.dashboard',compact('agents','developer','pending_contracts','projects','underConstructionUnit','outdated_projects','under_construction_projects','ready_units','sold_out_projects','project','associate'));
     }
     /**
      * This will chek user is superadmin or not

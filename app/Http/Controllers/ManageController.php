@@ -58,15 +58,17 @@ class ManageController extends Controller
     {
         try {
             $permission = Permission_role_mapping::where('user_id', Auth::user()->id)->where('permissions_id', 5)->first();
-
+            $past_date = Carbon::now()->subdays(90);
             if ($request->status == 'listing') {
                 $data = ManageListings::with('developer', 'notes', 'reminder', 'communitys', 'subcommunitys')->where(['ready_status' => 0, 'sold_out_status' => 0])->orderBy('updated_at', 'desc');
                 if (Auth::user()->role == 3) {
-                    $past_date = Carbon::now()->subdays(90);
                     $data->where('updated_at', '>=', $past_date);
                 }
             } else if ($request->status == 'ready_listing') {
                 $data = ManageListings::with('developer', 'notes', 'reminder', 'communitys', 'subcommunitys')->where(['ready_status' => 1, 'sold_out_status' => 0])->orderBy('updated_at', 'desc');
+                if (Auth::user()->role == 3) {
+                    $data->where('updated_at', '>=', $past_date);
+                }
             } else if ($request->status == 'sold_out_listing') {
                 $data = ManageListings::with('developer', 'notes', 'reminder', 'communitys', 'subcommunitys')->where('sold_out_status', 1)->orderBy('updated_at', 'desc');
             } else if ($request->status == 'outdated_listing') {

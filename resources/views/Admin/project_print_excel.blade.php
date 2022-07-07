@@ -25,56 +25,56 @@
                 </th>
                 <th style="word-wrap: break-word;">
                     @if($item->property)
-                        {{$item->property}}                        
+                        {{$item->property}}
                     @else
                         -
                     @endif
                 </th>
                 <th>
                     @if($item->bedrooms)
-                        {{$item->bedrooms}}                        
+                        {{$item->bedrooms}}
                     @else
                         -
                     @endif
                 </th>
                 <th style="word-wrap: break-word;">
                     @if($item->location)
-                        {{$item->location}}                        
+                        {{$item->location}}
                     @else
                         -
                     @endif
                 </th>
                 <th>
                     @if($item->size)
-                        {{$item->size}}                        
+                        {{$item->size}}
                     @else
                         -
                     @endif
                 </th>
                 <th>
                     @if($item->price)
-                        {{$item->price}}                        
+                        {{$item->price}}
                     @else
                         -
                     @endif
                 </th>
                 <th style="word-wrap: break-word;">
                     @if($item->developer->company)
-                        {{$item->developer->company}}                        
+                        {{$item->developer->company}}
                     @else
                         -
                     @endif
                 </th>
                 <th style="word-wrap: break-word;">
                     @if($item->project)
-                        {{$item->project}}                        
+                        {{$item->project}}
                     @else
                         -
                     @endif
                 </th>
                 <th>
                     @if($item->quarter && $item->handover_year)
-                        {{$item->quarter}}, {{$item->handover_year}}                  
+                        {{$item->quarter}}, {{$item->handover_year}}
                     @else
                         -
                     @endif
@@ -82,7 +82,7 @@
                 <th style="word-wrap: break-word;">
                 @if (!($item->paymentplan->isEmpty() ))
                     @foreach ($item['paymentplan'] as $payment)
-                        {{ $payment->percentage }}% 
+                        {{ $payment->percentage }}%
                         On
                         {{ $payment->installment_terms }}
                         {{ $payment->milestone }}
@@ -97,27 +97,27 @@
                 </th>
                 <th>
                     @if($item->pre_handover_amount)
-                        {{$item->pre_handover_amount}}                        
+                        {{$item->pre_handover_amount}}
                     @else
                         -
                     @endif
                 </th>
                 <th>
                     @if($item->handover_amount)
-                        {{$item->handover_amount}}                        
+                        {{$item->handover_amount}}
                     @else
                         -
                     @endif
                 </th>
                 <th>
                     @if($item->post_handover)
-                        {{$item->post_handover}}                        
+                        {{$item->post_handover}}
                     @else
                         -
                     @endif
                 </th>
                 <th style="word-wrap: break-word;">
-                    {{URL::route('view-unit',$item->id)}}
+                    {{URL::route('view-unit',[$item->id,$user_id])}}
                 </th>
             </tr>
         @endforeach
