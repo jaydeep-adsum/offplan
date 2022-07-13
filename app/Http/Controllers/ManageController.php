@@ -97,23 +97,26 @@ class ManageController extends Controller
                 })
                 ->addColumn('flag', function ($row) {
                     if($row->flag==1){
+                        $flag = 'New Launch';
+                        $class='danger';
+                    } else if($row->flag==2){
                         $flag = 'High in Demand';
                         $class='primary';
-                    } else if($row->flag==2){
+                    } else if($row->flag==3){
                         $flag = 'Limited Availability';
                         $class='success';
-                    } else if($row->flag==3){
+                    } else if($row->flag==4){
                         $flag = 'Value for Money';
                         $class='warning';
-                    } else if($row->flag==4){
+                    } else if($row->flag==5){
                         $flag = 'Best Layout';
                         $class='info';
-                    } else if($row->flag==5){
+                    } else if($row->flag==6){
                         $flag = 'Attractive Payment Plan';
                         $class='secondary';
                     } else {
-                        $flag = 'New Launch';
-                        $class='danger';
+                        $flag = '-';
+                        $class='';
                     }
 
                     return "<span class='badge badge-$class'>".$flag."</span>";
@@ -182,12 +185,13 @@ class ManageController extends Controller
                                 <i style="color: #6a6a6a" class="fa fa-cogs mt-2"></i>
                                 </span>
                                     <div class="dropdown-menu px-2">
-                                      <span class="dropdown-item flag" data-id="' . $row->id . '" data-flag="0"><i class="fa fa-plus mr-2"></i>New Launch</span>
-                                      <span class="dropdown-item flag" data-id="' . $row->id . '" data-flag="1"><i class="fa fa-plus mr-2 mt-2"></i>High in Demand</span>
-                                      <span class="dropdown-item flag" data-id="' . $row->id . '" data-flag="2"><i class="fa fa-plus mr-2 mt-2"></i>Limited Availability</span>
-                                      <span class="dropdown-item flag" data-id="' . $row->id . '" data-flag="3"><i class="fa fa-plus mr-2 mt-2"></i>Value for Money</span>
-                                      <span class="dropdown-item flag" data-id="' . $row->id . '" data-flag="4"><i class="fa fa-plus mr-2 mt-2"></i>Best Layout</span>
-                                      <span class="dropdown-item flag" data-id="' . $row->id . '" data-flag="5"><i class="fa fa-plus mr-2 mt-2"></i>Attractive Payment Plan</span>
+                                      <span class="dropdown-item flag" data-id="' . $row->id . '" data-flag="0"><i class="fa fa-plus mr-2"></i>Select Flag</span>
+                                      <span class="dropdown-item flag" data-id="' . $row->id . '" data-flag="1"><i class="fa fa-plus mr-2"></i>New Launch</span>
+                                      <span class="dropdown-item flag" data-id="' . $row->id . '" data-flag="2"><i class="fa fa-plus mr-2 mt-2"></i>High in Demand</span>
+                                      <span class="dropdown-item flag" data-id="' . $row->id . '" data-flag="3"><i class="fa fa-plus mr-2 mt-2"></i>Limited Availability</span>
+                                      <span class="dropdown-item flag" data-id="' . $row->id . '" data-flag="4"><i class="fa fa-plus mr-2 mt-2"></i>Value for Money</span>
+                                      <span class="dropdown-item flag" data-id="' . $row->id . '" data-flag="5"><i class="fa fa-plus mr-2 mt-2"></i>Best Layout</span>
+                                      <span class="dropdown-item flag" data-id="' . $row->id . '" data-flag="6"><i class="fa fa-plus mr-2 mt-2"></i>Attractive Payment Plan</span>
                                       <span class="dropdown-item mt-2">Option 7</span>
                                       <span class="dropdown-item mt-2">Option 8</span>
                                     </div>

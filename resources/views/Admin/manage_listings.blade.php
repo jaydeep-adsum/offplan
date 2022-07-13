@@ -144,12 +144,12 @@
                                 </div>
                                 <div class="input-group col-3 mb-3">
                                     <select class="form-control select-flag select2" name="flag[]" multiple="multiple">
-                                        <option value="0">New Launch</option>
-                                        <option value="1">High in Demand</option>
-                                        <option value="2">Limited Availability</option>
-                                        <option value="3">Value for Money</option>
-                                        <option value="4">Best Layout</option>
-                                        <option value="5">Attractive Payment Plan</option>
+                                        <option value="1">New Launch</option>
+                                        <option value="2">High in Demand</option>
+                                        <option value="3">Limited Availability</option>
+                                        <option value="4">Value for Money</option>
+                                        <option value="5">Best Layout</option>
+                                        <option value="6">Attractive Payment Plan</option>
                                     </select>
                                 </div>
                                 <div class="col-3">
