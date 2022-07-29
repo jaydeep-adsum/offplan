@@ -20,7 +20,8 @@ Auth::routes();
 Route::get('/home', 'HomeController@index')->name('home');
 Route::get('/login-history', 'HomeController@loginHistory')->name('loginHistory');
 Route::group(['middleware' => 'auth'], function() {
-
+    Route::post('localImageSaveUnit','ManageController@localImageSaveUnit')->name('localImageSaveUnit');
+    Route::post('getLocalImageProduct','ManageProjectController@getLocalImageProduct')->name('getLocalImageProduct');
 	Route::group(['prefix' => 'manage_project'], function(){
 		Route::get('projectIndex','ManageProjectController@projectIndex')->name('projectIndex');
 		Route::get('addProject','ManageProjectController@addProject')->name('addProject');
@@ -112,6 +113,7 @@ Route::group(['prefix' => '/manage-listing'], function(){
 });
 
 /*********************************  Unit  *********************************/
+Route::post('getProjectData','ManageController@getProjectData')->name('getProjectData');
 Route::get('manage_listings','ManageController@managelistings')->name('manage_listings')->middleware('read_unit');
 Route::post('datatableManageListings','ManageController@datatableManageListings')->name('datatableManageListings');
 Route::get('update_flag_status','ManageController@updateFlag')->name('update_flag_status');
@@ -127,8 +129,11 @@ Route::post('submit-copy-unit','ManageController@submitunit')->name('submit-copy
 
 Route::get('delete-unit','ManageController@deleteunit')->name('delete-unit')->middleware('delete_unit');
 
+Route::post('deleteUnitMilestone','ManageController@delete_unit_milestone')->name('deleteUnitMilestone')->middleware('delete_unit');
 Route::get('delete-unit-milestone/{id}','ManageController@delete_unit_milestone')->name('delete-unit-milestone')->middleware('delete_unit');
 Route::get('search-list','ManageController@searchlist')->name('search-list');
+    Route::post('deleteUnitDocuments','ManageController@unitremoveattachment')->name('deleteUnitDocuments')->middleware('delete_unit');
+    Route::post('deleteUnitAttachments','ManageController@deleteUnitAttachments')->name('deleteUnitAttachments');
 
 Route::post('unit-attachment-post','ManageController@unitattachmentpost')->name('unit-attachment-post')->middleware('add_unit');
 Route::get('unit-removeattachment','ManageController@unitremoveattachment')->name('unit-removeattachment')->middleware('delete_unit');

@@ -229,49 +229,49 @@
             </div>
             @endif
 
-            <div class="card card-info">
-                <div class="card-header">
-                    <h3 class="card-title">Attachment File</h3>
-                    <button class="btn btn-info add-row" type="button" style="float: right;"><i class="fas fa-plus-square"></i></i></button>
-                </div>
-                <form class="form-horizontal" id="frmTarget" enctype="multipart/form-data">
-                    <div class="card-body abc">
-                        @csrf
-                        <input type="hidden" name="project_id" value="{{$manage_listings['id']}}">
-                        <div class="form-group row">
-                            <div class="col-sm-6">
-                                <input type="text" name="attachment[0][attachment_name]" class="form-control mb-2"
-                                    placeholder="Enter The File Name">
-                            </div>
-                            <div class="col-sm-6">
-                                <input type="file" name="attachment[0][attachment_multiple]" id="files"
-                                    accept="image/*, video/*, .pdf , .doc, .docx, application/vnd.ms-excel, .csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"/>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="container">
-                        <div class="row">
-                            <div class="col-10">
-                                <div id="image_preview" class="row">
-                                    @if($unitmultipleattachment)
-                                    @foreach($unitmultipleattachment as $key=>$image)
-                                    <div class='upload-image text-center mb-2' title="{{$image->attachment_name}}" id ="{{$image->id}}" >
-                                        <a href="{{asset('public/project_attachment/'.json_decode($image->attachment_multiple))}}" data_id="{{$key}}" target="_blank">
-                                            {{$image->attachment_name}}
-                                        </a>
-                                        <i style='color: red' onclick="projectemoveattachment(this,{{$image->id}})" class="fas fa-trash-alt delete mt-2" data-toggle="tooltip" data-placement="bottom" title="Delete"></i>
-                                    </div>
-                                    @endforeach
-                                    @endif
-                                </div>
-                            </div>
-                            <div class="col-2">
-                                <button type="submit" id="submit-all" class="btn btn-primary mr-1 mb-1" style="float: right;">Attach</button>
-                            </div>
-                        </div>
-                    </div>
-                </form>
-            </div>
+{{--            <div class="card card-info">--}}
+{{--                <div class="card-header">--}}
+{{--                    <h3 class="card-title">Attachment File</h3>--}}
+{{--                    <button class="btn btn-info add-row" type="button" style="float: right;"><i class="fas fa-plus-square"></i></i></button>--}}
+{{--                </div>--}}
+{{--                <form class="form-horizontal" id="frmTarget" enctype="multipart/form-data">--}}
+{{--                    <div class="card-body abc">--}}
+{{--                        @csrf--}}
+{{--                        <input type="hidden" name="project_id" value="{{$manage_listings['id']}}">--}}
+{{--                        <div class="form-group row">--}}
+{{--                            <div class="col-sm-6">--}}
+{{--                                <input type="text" name="attachment[0][attachment_name]" class="form-control mb-2"--}}
+{{--                                    placeholder="Enter The File Name">--}}
+{{--                            </div>--}}
+{{--                            <div class="col-sm-6">--}}
+{{--                                <input type="file" name="attachment[0][attachment_multiple]" id="files"--}}
+{{--                                    accept="image/*, video/*, .pdf , .doc, .docx, application/vnd.ms-excel, .csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"/>--}}
+{{--                            </div>--}}
+{{--                        </div>--}}
+{{--                    </div>--}}
+{{--                    <div class="container">--}}
+{{--                        <div class="row">--}}
+{{--                            <div class="col-10">--}}
+{{--                                <div id="image_preview" class="row">--}}
+{{--                                    @if($unitmultipleattachment)--}}
+{{--                                    @foreach($unitmultipleattachment as $key=>$image)--}}
+{{--                                    <div class='upload-image text-center mb-2' title="{{$image->attachment_name}}" id ="{{$image->id}}" >--}}
+{{--                                        <a href="{{asset('public/project_attachment/'.json_decode($image->attachment_multiple))}}" data_id="{{$key}}" target="_blank">--}}
+{{--                                            {{$image->attachment_name}}--}}
+{{--                                        </a>--}}
+{{--                                        <i style='color: red' onclick="projectemoveattachment(this,{{$image->id}})" class="fas fa-trash-alt delete mt-2" data-toggle="tooltip" data-placement="bottom" title="Delete"></i>--}}
+{{--                                    </div>--}}
+{{--                                    @endforeach--}}
+{{--                                    @endif--}}
+{{--                                </div>--}}
+{{--                            </div>--}}
+{{--                            <div class="col-2">--}}
+{{--                                <button type="submit" id="submit-all" class="btn btn-primary mr-1 mb-1" style="float: right;">Attach</button>--}}
+{{--                            </div>--}}
+{{--                        </div>--}}
+{{--                    </div>--}}
+{{--                </form>--}}
+{{--            </div>--}}
         </div>
         <div class="col-lg-4 col-md-5 col-12">
             <div class="card mt-3 mt-md-0">
@@ -282,7 +282,7 @@
                     <div class="media">
                         <img class="mr-3 user" style="height: 60px" src="https://static.thenounproject.com/png/17241-200.png" >
                         <div class="media-body">
-                            <h6 class="mt-0">{{ $manage_listings['developer']['company'] }}</h6>
+                            <h6 class="mt-0">{{ isset($manage_listings['developer'])?$manage_listings['developer']['company']:'' }}</h6>
                             <p class="m-0">{{ $manage_listings['user']['name'] }}</p>
                             <p class="m-0">{{ $manage_listings['user']['phone'] }}</p>
                             <p class="m-0">{{ $manage_listings['user']['email'] }}</p>
@@ -391,25 +391,103 @@
             </div>
             @endif
 
-            @if ($manage_listings->pdf)
-            <div class="card mt-3">
+            <div class="card">
                 <div class="card-header header">
-                     <p class="property desc m-0">Attachments</p>
-                </div>
-                <div class="card-body ">
-                    @if ($manage_listings->pdf)
-                    @foreach (json_decode($manage_listings->pdf) as $item)
-                        <a href="{{asset('public/files/profile/'.$item)}}" style="height:120px; width:100px" target="_blank" download>
-                                @php ($pdf = explode('-', $item))@endphp
-                                {{$pdf[1]}}
-                        </a><br>
-                    @endforeach
-                    @else
-
+                    <span class="project-note m-0">Attachment File</span>
+                    @if($permission && $projectAssignAgents)
+                        @if($permission->create)
+                            <button class="btn add-row p-0" type="button" style="float: right; font-size: initial;"><i class="fas fa-plus-circle"></i></button>
+                        @endif
                     @endif
                 </div>
+                <form class="form-horizontal" id="frmTarget" enctype="multipart/form-data">
+                    @if($permission && $projectAssignAgents)
+                        @if($permission->create)
+                            <div class="card-body abc">
+                                @csrf
+                                <input type="hidden" name="project_id" value="{{$manage_listings['id']}}">
+                                <div class="form-group row">
+                                    <div class="col-sm-6">
+                                        <input type="text" name="attachment[0][attachment_name]" class="form-control mb-2"
+                                               placeholder="Enter The File Name">
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <input type="file" name="attachment[0][attachment_multiple]" id="files"
+                                               accept="image/*, video/*, .pdf , .doc, .docx, application/vnd.ms-excel, .csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"/>
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
+                    @endif
+                    <div class="container">
+                        <div class="row">
+                            <div class="col-10">
+                                <div class="crad-body">
+                                    @if($unitmultipleattachment)
+                                        @foreach($unitmultipleattachment as $key=>$image)
+                                            <a href="{{asset('public/project_attachment/'.json_decode($image->attachment_multiple))}}" data_id="{{$key}}" target="_blank" class="mt-2">
+                                                {{$image->attachment_name}}
+                                            </a>
+                                            @if($permission && $projectAssignAgents)
+                                                @if($permission->delete)
+                                                    <i style='color: red' onclick="deleteUnitDocuments(this,{{$image->id}})" class="fas fa-trash-alt delete mt-2" data-toggle="tooltip" data-placement="bottom" title="Delete"></i>
+                                                @endif
+                                            @endif
+                                            <br>
+                                        @endforeach
+                                    @endif
+
+                                    @if ($manage_listings->pdf)
+                                        @foreach (json_decode($manage_listings->pdf) as $key => $item)
+                                            <a href="{{asset('public/files/profile/'.$item)}}" target="_blank">
+                                                @php ($pdf = explode('-', $item))@endphp
+                                                @if(count($pdf) > 1)
+                                                    {{$pdf[1]}}
+                                                @else
+                                                    {{$pdf[0]}}
+                                                @endif
+                                            </a>
+                                            @if($permission && $projectAssignAgents)
+                                                @if($permission->delete)
+                                                    <i style='color: red' onclick="deleteUnitAttachments(this,{{$manage_listings->id}}, {{$key}})" class="fas fa-trash-alt mt-2" data-toggle="tooltip" data-placement="bottom" title="Delete"></i>
+                                                @endif
+                                            @endif
+                                            <br>
+                                        @endforeach
+                                    @endif
+                                </div>
+                            </div>
+                            <div class="col-2">
+                                @if($permission && $projectAssignAgents)
+                                    @if($permission->create)
+                                        <button type="submit" id="submit-all" class="btn btn-primary mr-1 mb-1" style="float: right;">Attach</button>
+                                    @endif
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                </form>
             </div>
-            @endif
+
+{{--            @if ($manage_listings->pdf)--}}
+{{--            <div class="card mt-3">--}}
+{{--                <div class="card-header header">--}}
+{{--                     <p class="property desc m-0">Attachments</p>--}}
+{{--                </div>--}}
+{{--                <div class="card-body ">--}}
+{{--                    @if ($manage_listings->pdf)--}}
+{{--                    @foreach (json_decode($manage_listings->pdf) as $item)--}}
+{{--                        <a href="{{asset('public/files/profile/'.$item)}}" style="height:120px; width:100px" target="_blank" download>--}}
+{{--                                @php ($pdf = explode('-', $item))@endphp--}}
+{{--                                {{$pdf[1]}}--}}
+{{--                        </a><br>--}}
+{{--                    @endforeach--}}
+{{--                    @else--}}
+
+{{--                    @endif--}}
+{{--                </div>--}}
+{{--            </div>--}}
+{{--            @endif--}}
 
              @if($manage_listings->reminder()->exists())
 
@@ -673,6 +751,97 @@
             });
         });
     });
+
+    function deleteUnitDocuments(value, id) {
+
+        swal({
+            title: "Delete?",
+            text: "Please ensure and then confirm!",
+            type: "warning",
+            showCancelButton: !0,
+            confirmButtonText: "Yes, delete it!",
+            cancelButtonText: "No, cancel!",
+            reverseButtons: !0
+        }).then(function (e) {
+
+            if (e.value === true) {
+                window.swal({
+                    title: "Checking...",
+                    text: "Please wait",
+                    imageUrl: "{{ asset('public/ajaxloader/ajaxloader.gif') }}",
+                    showConfirmButton: false,
+                    allowOutsideClick: false
+                });
+                $.ajax({
+                    url: "{{route('deleteUnitDocuments')}}",
+                    type: "POST",
+                    data: {
+                        id: id,
+                        _token: '{{csrf_token()}}'
+                    },
+                    dataType: 'json',
+                    success: function (data) {
+                        if (data.status == 1) {
+                            location.reload();
+                        } else {
+                            swal("ERROR!", '<div class="message"> <ul> <li>' + data.message + '</li> </ul></div>', "error");
+                        }
+                    }
+                });
+            } else {
+                e.dismiss;
+            }
+
+        }, function (dismiss) {
+            return false;
+        })
+    }
+
+    function deleteUnitAttachments(value, id, key) {
+
+        swal({
+            title: "Delete?",
+            text: "Please ensure and then confirm!",
+            type: "warning",
+            showCancelButton: !0,
+            confirmButtonText: "Yes, delete it!",
+            cancelButtonText: "No, cancel!",
+            reverseButtons: !0
+        }).then(function (e) {
+
+            if (e.value === true) {
+                window.swal({
+                    title: "Checking...",
+                    text: "Please wait",
+                    imageUrl: "{{ asset('public/ajaxloader/ajaxloader.gif') }}",
+                    showConfirmButton: false,
+                    allowOutsideClick: false
+                });
+                $.ajax({
+                    url: "{{route('deleteUnitAttachments')}}",
+                    type: "POST",
+                    data: {
+                        id: id,
+                        key: key,
+                        _token: '{{csrf_token()}}'
+                    },
+                    dataType: 'json',
+                    success: function (data) {
+                        if (data.status == 1) {
+                            location.reload();
+                        } else {
+                            swal("ERROR!", '<div class="message"> <ul> <li>' + data.message + '</li> </ul></div>', "error");
+                        }
+                    }
+                });
+            } else {
+                e.dismiss;
+            }
+
+        }, function (dismiss) {
+            return false;
+        })
+    }
 
     function projectemoveattachment(value,id)
     {

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Developer;
+use App\Models\LocalImage;
 use App\Models\ManageProject;
 use App\Models\Features;
 use App\Models\Milestones;
@@ -30,9 +31,9 @@ use Image;
 class ManageProjectController extends Controller
 {
     use ResponseTrait, UtilityTrait;
-    
+
     public function projectIndex(Request $request)
-    {        
+    {
         $project = ManageProject::where(['ready_status' => '0', 'sold_out_status' => '0'])->distinct()->orderBy('project')->get('project');
         $typeList = Categories::orderBy('catName')->pluck('catName');
         $userlist = Developer::orderBy('company')->get();
@@ -256,7 +257,7 @@ class ManageProjectController extends Controller
 
                 })
                 ->filter(function ($query) use ($request) {
-                    
+
                     $input = $this->objectToArray($request->all());
 
                     if(isset($input['company'])){
@@ -277,7 +278,7 @@ class ManageProjectController extends Controller
                     if(isset($input['project_status']))
                     {
                         $query = $query->where('completion_status',$input['project_status']);
-                        
+
                         if($input['project_status'] == 2)
                         {
                             if(isset($input['quarter'])){
@@ -370,18 +371,49 @@ class ManageProjectController extends Controller
         return view('Admin.project.editProject',compact('developerData','typeList','community','project','featuresList','milestoneData','subcommunity'));
     }
 
+    public function getLocalImageProduct(Request $request)
+    {
+        try {
+            if($request->local_image_id)
+            {
+                $localDataGet = LocalImage::where('local_image_id',$request->local_image_id)->first();
+                if($localDataGet)
+                {
+                    $image = json_decode($localDataGet->local_image_file);
+                    $imageArray = array();
+                    foreach($image as $value)
+                    {
+                        array_push($imageArray, asset('public/localSaveImage/'.$value));
+                    }
+                    return response()->json(['status' => 1, 'data' => ['imageArray' => $imageArray, 'imageName' => $image] ,'message' => 'successfully fetch.']);
+                }
+                else
+                {
+                    return response()->json(['status' => 0, 'message' => 'Something went wrong!']);
+                }
+            }
+            else
+            {
+                $id = LocalImage::get_random_string();
+                return response()->json(['status' => 1, 'data' => $id ,'message' => 'get random string successfully.']);
+            }
+        } catch (\Exception $ex) {
+            return $this->sendErrorResponse($ex);
+        }
+    }
+
     public function addProjectSubmit(Request $request)
     {
         try {
             $input = $this->objectToArray($request->input());
             $requiredParams = $this->requiredRequestParams('create');
-            $meassage = [   
+            $meassage = [
                             'quarter.required_if' => 'The quarter field is required',
                             'handover_year.required_if' => 'The handover year field is required'
                         ];
             $validator = Validator::make($input, $requiredParams, $meassage);
-            
-            if($validator->fails()) 
+
+            if($validator->fails())
             {
                 $errorMessage = implode('<br> <li>', $validator->errors()->all());
                 return response()->json(['status' => 0, 'message' => $errorMessage]);
@@ -393,7 +425,7 @@ class ManageProjectController extends Controller
             }
 
             $input['user_id'] = Auth::user()->id;
-            
+
             if($request->hasfile('filesList'))
             {
                 foreach($request->file('filesList') as $file)
@@ -411,7 +443,7 @@ class ManageProjectController extends Controller
                     {
                         $image_name = rand(111111,999999).'_'.time().'-'.$file->getClientOriginalName();
                         $img = Image::make($file->getRealPath())->resize(600, 400);
-                        $watermark = Image::make('public/files/logo.png');                
+                        $watermark = Image::make('public/files/logo.png');
                         $img->insert($watermark, 'center', 5, 5);
                         $img->save('public/projectFiles/images/'.$image_name);
                     }
@@ -438,7 +470,7 @@ class ManageProjectController extends Controller
                         $floor_plan_image = rand(111111,999999).'_'.time().'-'.$file->getClientOriginalName();
                         $file->move(public_path('projectFiles/floor_plan_image'), $floor_plan_image);
                     }
-                    $data1[] = $floor_plan_image;  
+                    $data1[] = $floor_plan_image;
                 }
                 $dataProject['floor_plan_image'] = json_encode($data1);
             }
@@ -461,7 +493,7 @@ class ManageProjectController extends Controller
                         $video_name = rand(111111,999999).'_'.time().'-'.$file->getClientOriginalName();
                         $file->move(public_path('projectFiles/video'), $video_name);
                     }
-                    $data2[] = $video_name;  
+                    $data2[] = $video_name;
                 }
                 $dataProject['video'] = json_encode($data2);
             }
@@ -483,12 +515,12 @@ class ManageProjectController extends Controller
                         $pdf_name = rand(111111,999999).'_'.time().'-'.$file->getClientOriginalName();
                         $file->move(public_path('projectFiles/pdf'), $pdf_name);
                     }
-                    $data3[] = $pdf_name;  
+                    $data3[] = $pdf_name;
                 }
                 $dataProject['pdf'] = json_encode($data3);
             }
-            
-            
+
+
             $checkindex = $this->checkindex();
             if($checkindex == null)
             {
@@ -497,7 +529,7 @@ class ManageProjectController extends Controller
                 {
                     $index_key = sprintf('%02u', $index_key);
                 }
-            } 
+            }
             else
             {
                 $index_key = $checkindex + 1;
@@ -508,7 +540,7 @@ class ManageProjectController extends Controller
             }
             $input['index_key'] = $index_key;
 
-            
+
             if(empty($input['ready_status']))
             {
                 $dataProject['ready_status'] = ($input['completion_status'] == 1) ? 1 : 0;
@@ -552,7 +584,7 @@ class ManageProjectController extends Controller
             $dataProject['sold_out_status'] = !empty($input['sold_out_status']) ? 1 : 0;
 
             $project = ManageProject::create($dataProject);
-          
+
             if($input['payment_plan'] == "Yes")
             {
                 if(!empty($input['milestone']))
@@ -582,8 +614,8 @@ class ManageProjectController extends Controller
                     $createBedrooms = ProjectBedRooms::create($bedrooms);
                 }
             }
-            
-            if($project) 
+
+            if($project)
             {
                 return response()->json(['status' => 1, 'message' => 'Has been added as a project']);
             }
@@ -613,7 +645,7 @@ class ManageProjectController extends Controller
             $requiredParams = $this->requiredRequestParams('update', $id);
             $validator = Validator::make($input, $requiredParams);
 
-            if ($validator->fails()) 
+            if ($validator->fails())
             {
                 return response()->json(['status' => 0, 'message' => implode('<br> <li>', $validator->errors()->all())]);
             }
@@ -623,7 +655,7 @@ class ManageProjectController extends Controller
                 $input['features'] = json_encode($input['featuresList']);
             }
 
-            if($request->hasfile('filesList')) 
+            if($request->hasfile('filesList'))
             {
                 foreach($request->file('filesList') as $file)
                 {
@@ -640,11 +672,11 @@ class ManageProjectController extends Controller
                     {
                         $image_name = rand(111111,999999).'_'.time().'-'.$file->getClientOriginalName();
                         $img = Image::make($file->getRealPath())->resize(600, 400);
-                        $watermark = Image::make('public/files/logo.png');                
+                        $watermark = Image::make('public/files/logo.png');
                         $img->insert($watermark, 'center', 5, 5);
                         $img->save('public/projectFiles/images/'.$image_name);
                     }
-                    $data[] = $image_name;  
+                    $data[] = $image_name;
                 }
                 $dataProject['image'] = json_encode($data);
             }
@@ -667,7 +699,7 @@ class ManageProjectController extends Controller
                         $floor_plan_image = rand(111111,999999).'_'.time().'-'.$file->getClientOriginalName();
                         $file->move(public_path('projectFiles/floor_plan_image'), $floor_plan_image);
                     }
-                    $data1[] = $floor_plan_image;  
+                    $data1[] = $floor_plan_image;
                 }
                 $dataProject['floor_plan_image'] = json_encode($data1);
             }
@@ -690,7 +722,7 @@ class ManageProjectController extends Controller
                         $video_name = rand(111111,999999).'_'.time().'-'.$file->getClientOriginalName();
                         $file->move(public_path('projectFiles/video'), $video_name);
                     }
-                    $data2[] = $video_name;  
+                    $data2[] = $video_name;
                 }
                 $dataProject['video'] = json_encode($data2);
             }
@@ -713,7 +745,7 @@ class ManageProjectController extends Controller
                         $pdf_name = rand(111111,999999).'_'.time().'-'.$file->getClientOriginalName();
                         $file->move(public_path('projectFiles/pdf'), $pdf_name);
                     }
-                    $data3[] = $pdf_name;  
+                    $data3[] = $pdf_name;
                 }
                 $dataProject['pdf'] = json_encode($data3);
             }
@@ -728,7 +760,7 @@ class ManageProjectController extends Controller
                 $input['completion_status'] = 1;
             }
 
-            
+
             $dataProject['developer_id'] = $input['developer_id'] ? $input['developer_id'] : 0;
             $dataProject['project'] = $input['project'];
             $dataProject['completion_status'] = $input['completion_status'] ? $input['completion_status'] : 0;
@@ -760,7 +792,7 @@ class ManageProjectController extends Controller
             $projectUpdate = $project->update($dataProject);
 
             $project = ManageProject::find($id);
-           
+
             if($input['payment_plan'] == "Yes")
             {
                 foreach ($input['milestone'] as $key => $value) {
@@ -771,13 +803,13 @@ class ManageProjectController extends Controller
                             $payment['installment_terms'] = $value['installment_terms'] ? $value['installment_terms'] : 0;
                             $payment['milestone'] = $value['milestones'];
                             $payment['percentage'] = $value['percentage'] ? $value['percentage'] : 0;
-                            $projectPaymentPlan = ProjectPaymentPlan::where(['project_id'=> $id, 'id' => $value['id']])->update($payment); 
+                            $projectPaymentPlan = ProjectPaymentPlan::where(['project_id'=> $id, 'id' => $value['id']])->update($payment);
                         } else{
                             $payment['project_id'] = $project->id;
                             $payment['installment_terms'] = $value['installment_terms'] ? $value['installment_terms'] : 0;
                             $payment['milestone'] = $value['milestones'];
                             $payment['percentage'] = $value['percentage'] ? $value['percentage'] : 0;
-                            $projectPaymentPlan = ProjectPaymentPlan::create($payment);  
+                            $projectPaymentPlan = ProjectPaymentPlan::create($payment);
                         }
                     }
                 }
@@ -810,11 +842,11 @@ class ManageProjectController extends Controller
                 }
             }
 
-            if ($projectUpdate) 
+            if ($projectUpdate)
             {
-                return response()->json(['status' => 1, 'message' => 'Has been updated as a project']);                    
-            } 
-            else 
+                return response()->json(['status' => 1, 'message' => 'Has been updated as a project']);
+            }
+            else
             {
                 return response()->json(['status' => 0, 'message' => 'Failed to update project details']);
             }
@@ -835,7 +867,7 @@ class ManageProjectController extends Controller
             return response()->json(['status' => 0, 'message' => 'Something went wrong!']);
         }
     }
-    
+
     public function deleteProjectmilestone($id)
     {
         $ProjectPaymentPlan = ProjectPaymentPlan::find($id)->delete();
@@ -851,7 +883,7 @@ class ManageProjectController extends Controller
             {
                 return response()->json(['status' => 0, 'message' => 'Project not found']);
             }
-            
+
             if(json_decode($project->image,true)){
                 foreach (json_decode($project->image) as $value) {
                     if (file_exists(public_path('/projectFiles/image/'.$value))) {
@@ -888,11 +920,11 @@ class ManageProjectController extends Controller
 
             $projectBedroomsDelete = ProjectBedRooms::where('project_id',$request->id)->delete();
             $projectPaymentPlanDelete = ProjectPaymentPlan::where('project_id',$request->id)->delete();
-            
+
             if($projectDelete)
             {
                 return response()->json(['status' => 1, 'message' => 'Has been removed as a project']);
-            } 
+            }
             else
             {
                 return response()->json(['status' => 0, 'message' => 'Failed to remove Agent project']);
@@ -976,7 +1008,7 @@ class ManageProjectController extends Controller
                     'location' => 'required',
                     'community' => 'required',
                     'subcommunity' => 'required',
-                    
+
                     'payment_plan' => 'required',
 
                     // 'milestone.*.installment_terms' => 'required_if:payment_plan,==,Yes',
@@ -996,7 +1028,7 @@ class ManageProjectController extends Controller
                     'location' => 'required',
                     'community' => 'required',
                     'subcommunity' => 'required',
-                    
+
                     'payment_plan' => 'required',
 
                     // 'milestone.*.installment_terms' => 'required_if:payment_plan,==,Yes',
@@ -1023,7 +1055,7 @@ class ManageProjectController extends Controller
     }
 
     public function readyProjectIndex()
-    {            
+    {
         $project = ManageProject::where(['ready_status' => '1', 'sold_out_status' => '0'])->distinct()->orderBy('project')->get('project');
         $typeList = Categories::orderBy('catName')->pluck('catName');
         $userlist = Developer::orderBy('company')->get();
@@ -1110,7 +1142,7 @@ class ManageProjectController extends Controller
         try {
             $input = $request->all();
             $input['user_id'] = Auth::user()->id;
-                
+
             $requiredParams = $this->requiredRequestParams('project_document');
             $validator = Validator::make($request->all(), $requiredParams);
             if ($validator->fails()) {
@@ -1139,7 +1171,7 @@ class ManageProjectController extends Controller
                 return response()->json(['status' => 0, 'message' => 'Something went wrong!']);
             }
 
-            if($multipleDocument) 
+            if($multipleDocument)
             {
                 return response()->json(['status' => 1, 'message' => 'Has been added as a project document']);
             }
@@ -1191,8 +1223,8 @@ class ManageProjectController extends Controller
                 $exsitsdata->comment = $input['comment'];
                 $exsitsdata->save();
                 $reminder = 1;
-            } 
-            else 
+            }
+            else
             {
                 $reminder = ProjectReminders::create($input);
             }
@@ -1201,7 +1233,7 @@ class ManageProjectController extends Controller
             {
                 return response()->json(['status' => 1, 'message' => 'has been create a reminder']);
             }
-            else 
+            else
             {
                 return response()->json(['status' => 0, 'message' => "Failed to create reminder"]);
             }
@@ -1221,7 +1253,7 @@ class ManageProjectController extends Controller
                 $checkData->save();
                 return response()->json(['status' => 1, 'message' => "Reminder status updated"]);
             }
-            else 
+            else
             {
                 return response()->json(['status' => 0, 'message' => "Something went wrong!"]);
             }
@@ -1238,17 +1270,17 @@ class ManageProjectController extends Controller
             if($deleteProjectAttachments)
             {
                 $pdf_or_excel = NULL;
-                foreach (json_decode($deleteProjectAttachments->pdf) as $key => $value) 
+                foreach (json_decode($deleteProjectAttachments->pdf) as $key => $value)
                 {
                     if($key == $request->key)
                     {
-                        if (file_exists(public_path('/projectFiles/pdf/'.$value))) 
+                        if (file_exists(public_path('/projectFiles/pdf/'.$value)))
                         {
                             @unlink(public_path('/projectFiles/pdf/'.$value));
                         }
                     }
                     else
-                    { 
+                    {
                         $pdf_or_excel[] = $value;
                     }
                 }
@@ -1280,8 +1312,8 @@ class ManageProjectController extends Controller
 
             $requiredParams = $this->requiredRequestParams('assignProject');
             $validator = Validator::make($input, $requiredParams);
-                
-            if($validator->fails()) 
+
+            if($validator->fails())
             {
                 $errorMessage = implode('<br> <li>', $validator->errors()->all());
                 return response()->json(['status' => 0, 'message' => $errorMessage]);

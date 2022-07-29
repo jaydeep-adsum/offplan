@@ -167,6 +167,7 @@
                             <thead>
                                 <tr>
                                     <th>Reference No</th>
+                                    <th>Assign To</th>
                                     <th>Flag</th>
                                     <th>Developer</th>
                                     <th>Project</th>
@@ -178,7 +179,7 @@
                                     <th>Handover</th>
                                     <th>Upto Handover(AED)</th>
                                     <th>Post-Handover(AED)</th>
-                                    <th>Project To Ready</th>
+{{--                                    <th>Project To Ready</th>--}}
                                     <th>Project To Soldout</th>
                                     <th>Updated Date</th>
                                     <th>Action</th>
@@ -332,6 +333,10 @@
                     name: 'rf_no'
                 },
                 {
+                    data: 'assign_to',
+                    name: 'assign_to'
+                },
+                {
                     data: 'flag',
                     name: 'flag'
                 },
@@ -375,10 +380,10 @@
                     data: 'post_handover',
                     name: 'post_handover'
                 },
-                {
-                    data: 'ready_status',
-                    name: 'ready_status'
-                },
+                // {
+                //     data: 'ready_status',
+                //     name: 'ready_status'
+                // },
                 {
                     data: 'sold_out_status',
                     name: 'sold_out_status'

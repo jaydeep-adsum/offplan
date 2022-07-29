@@ -106,8 +106,8 @@ class HomeController extends Controller
             $monitoringData[] = (array)$object;
         }
 
-       return view('Admin.login_history',compact('monitoringData'));
-        }
+        return view('Admin.login_history',compact('monitoringData'));
+    }
 
 
 }

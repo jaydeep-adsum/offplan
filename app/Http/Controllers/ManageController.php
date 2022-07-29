@@ -2,20 +2,24 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\LocalImage;
 use App\Models\ManageListings;
 use App\Models\Developer;
 use App\Models\Features;
+use App\Models\ManageProject;
 use App\Models\Paymentplan;
 use App\Models\Milestones;
 use App\Models\Community;
 use App\Models\ProjectAssignAgents;
+use App\Models\ProjectDocuments;
 use App\Models\Subcommunity;
 use App\Models\Categories;
 use App\Models\Note;
 use App\Models\User;
 use App\Models\Permission_role_mapping;
 use App\Models\UnitMultipleAttachment;
-use Carbon\Carbon;
+use Carbon;
+use File;
 use Session;
 use Illuminate\Routing\Controller;
 use Illuminate\Http\JsonResponse;
@@ -58,26 +62,130 @@ class ManageController extends Controller
     {
         try {
             $permission = Permission_role_mapping::where('user_id', Auth::user()->id)->where('permissions_id', 5)->first();
-            $past_date = Carbon::now()->subdays(90);
+            $past_date = Carbon\Carbon::now()->subdays(90);
             if ($request->status == 'listing') {
-                $data = ManageListings::with('developer', 'notes', 'reminder', 'communitys', 'subcommunitys')->where(['ready_status' => 0, 'sold_out_status' => 0])->orderBy('updated_at', 'desc');
+                $query = ManageListings::with('developer', 'notes', 'reminder', 'communitys', 'subcommunitys','manageProject','projectAssignAgents')->where(['ready_status' => 0, 'sold_out_status' => 0])->orderBy('updated_at', 'desc');
                 if (Auth::user()->role == 3) {
                     $data->where('updated_at', '>=', $past_date);
                 }
+                $copyUnitRoute = 'copy-unit';
+                $previewUnit = 'preview-unit';
             } else if ($request->status == 'ready_listing') {
-                $data = ManageListings::with('developer', 'notes', 'reminder', 'communitys', 'subcommunitys')->where(['ready_status' => 1, 'sold_out_status' => 0])->orderBy('updated_at', 'desc');
+                $query = ManageListings::with('developer', 'notes', 'reminder', 'communitys', 'subcommunitys','manageProject','projectAssignAgents')->where(['ready_status' => 1, 'sold_out_status' => 0])->orderBy('updated_at', 'desc');
                 if (Auth::user()->role == 3) {
                     $data->where('updated_at', '>=', $past_date);
                 }
+                $copyUnitRoute = 'ready-copy-unit';
+                $previewUnit = 'ready-preview-unit';
             } else if ($request->status == 'sold_out_listing') {
-                $data = ManageListings::with('developer', 'notes', 'reminder', 'communitys', 'subcommunitys')->where('sold_out_status', 1)->orderBy('updated_at', 'desc');
+                $query = ManageListings::with('developer', 'notes', 'reminder', 'communitys', 'subcommunitys','manageProject','projectAssignAgents')->where('sold_out_status', 1)->orderBy('updated_at', 'desc');
+                $copyUnitRoute = 'sold-out-copy-unit';
+                $previewUnit = 'sold-out-preview-unit';
             } else if ($request->status == 'outdated_listing') {
-                $data = ManageListings::with(['developer', 'notes', 'communitys', 'subcommunitys'])->whereHas('reminder', function ($query) {
+                $query = ManageListings::with('developer', 'notes', 'communitys', 'subcommunitys','manageProject','projectAssignAgents')->whereHas('reminder', function ($query) {
                     $query->whereDate('reminder_date', '<=', Carbon\Carbon::now('Europe/Stockholm'))->where('status', 0);
                 })->orderBy('updated_at', 'desc');
+                $copyUnitRoute = 'outdated-copy-unit';
+                $previewUnit = 'outdated-preview-unit';
             }
             $status = $request->status;
-            return Datatables::eloquent($data)
+            $input = $this->objectToArray($request->all());
+
+            if(isset($input['community'])){
+                $community = $input['community'];
+                $query = $query->whereHas('manageProject.communitys',function($query)use($community){
+                    $query->where('community',$community);
+                });
+            }
+            if(isset($input['subcommunity'])){
+                $subcommunity = $input['subcommunity'];
+                $query = $query->whereHas('manageProject.subcommunity',function($query)use($subcommunity){
+                    $query->where('subcommunity',$subcommunity);
+                });
+            }
+            if(isset($input['property'])){
+                $property = $input['property'];
+                $query = $query->whereHas('manageProject',function($query)use($property){
+                    $query->where('property',$property);
+                });
+            }
+            if(isset($input['bedrooms'])){
+                $query = $query->where('bedrooms',$input['bedrooms']);
+            }
+            if(isset($input['min_price']) || isset($input['max_price'])){
+                if(empty($input['min_price'])){
+                    $min_price = '0';
+                    $max_price = $input['max_price'];
+                    $query = $query->where('price','<=', $max_price);
+                }
+                else if(empty($input['max_price'])){
+                    $min_price = $input['min_price'];
+                    $max_price = '0';
+                    $query = $query->where('price','>=', $min_price);
+                }
+                else
+                {
+                    $min_price = $input['min_price'];
+                    $max_price = $input['max_price'];
+                    $query = $query->whereBetween('price', [$min_price, $max_price]);
+                }
+            }
+            if(isset($input['min_size']) || isset($input['max_size'])){
+                if(empty($input['min_size'])){
+                    $min_size = '0';
+                    $max_size = $input['max_size'];
+                    $query = $query->where('size','<=', $max_size);
+                }
+                else if(empty($input['max_size'])){
+                    $min_size = $input['min_size'];
+                    $max_size = '0';
+                    $query = $query->where('size','>=', $min_size);
+                }
+                else
+                {
+                    $min_size = $input['min_size'];
+                    $max_size = $input['max_size'];
+                    $query = $query->whereBetween('size', [$min_size, $max_size]);
+                }
+            }
+            if(isset($input['project'])){
+                $query = $query->where('project',$input['project']);
+            }
+            if(isset($input['company'])) {
+                $company = $input['company'];
+                $query = $query->whereHas('manageProject.developer',function($query)use($company){
+                    $query->where('company',$company);
+                });
+            }
+            if(isset($input['handover_year'])){
+                $handover_year = $input['handover_year'];
+                $query = $query->whereHas('manageProject',function($query)use($handover_year){
+                    $query->where('handover_year',$handover_year);
+                });
+            }
+            if(isset($input['quarter'])){
+                $quarter = $input['quarter'];
+                $query = $query->whereHas('manageProject',function($query)use($quarter){
+                    $query->where('quarter',$quarter);
+                });
+            }
+            if(isset($input['payment_plan'])){
+                $query = $query->where('payment_plan',$input['payment_plan']);
+            }
+            if(isset($input['amountuptohandover']) ){
+                $query = $query->where('up_to_handover','<=',$input['amountuptohandover']);
+            }
+            if(isset($input['posthandover'])){
+                $query = $query->where('post_handover','<=',$input['posthandover']);
+            }
+            if (isset($input['flag'])) {
+                $query = $query->whereIn('flag', $input['flag']);
+            }
+
+            $data = $query->get();
+
+
+            return Datatables::of($data)
                 ->addIndexColumn()
                 ->addColumn('active', function ($row) {
                     $class = 0;
@@ -121,50 +229,102 @@ class ManageController extends Controller
 
                     return "<span class='badge badge-$class'>".$flag."</span>";
                 })
-                ->addColumn('developer_company', function ($row) {
-                    return $row->developer ? $row->developer->company : '-';
+                ->addColumn('rf_no', function($row){
+                    return $row->rf_no ? $row->rf_no : '-';
                 })
-                ->addColumn('project', function ($row) {
+                ->addColumn('assign_to', function($row){
+                    return $row->projectAssignAgents ? $row->projectAssignAgents->user->name : '-';
+                })
+                ->addColumn('developer_company', function($row){
+                    return $row->manageProject ? $row->manageProject->developer ? $row->manageProject->developer->company : '-' : '-';
+                })
+                ->addColumn('project', function($row){
                     return $row->project ? $row->project : '-';
                 })
-                ->addColumn('communitys', function ($row) {
-                    return $row->communitys ? $row->communitys->name . ', Dubai, UAE' : ', Dubai, UAE';
+                ->addColumn('communitys', function($row){
+                    return $row->manageProject ? $row->manageProject->communitys ? $row->manageProject->communitys->name.', Dubai, UAE' : '' : '-';
                 })
-                ->addColumn('property', function ($row) {
-                    return $row->property ? $row->property : '-';
+                ->addColumn('property', function($row){
+                    return $row->manageProject ? $row->manageProject->property : '-';
                 })
-                ->addColumn('bedrooms', function ($row) {
+                ->addColumn('bedrooms', function($row){
                     return $row->bedrooms ? $row->bedrooms : '-';
                 })
-                ->addColumn('size', function ($row) {
+                ->addColumn('size', function($row){
                     return $row->size ? $row->size : '-';
                 })
-                ->addColumn('price', function ($row) {
-                    return $row->price ? number_format($row->price, 2, '.', ',') : '0';
+                ->addColumn('price', function($row){
+                    return $row->price ? number_format($row->price,2, '.', ',') : '0';
                 })
-                ->addColumn('quarter_and_handover_year', function ($row) {
-                    return ($row->quarter && $row->handover_year) ? $row->quarter . ', ' . $row->handover_year : '-';
+                ->addColumn('quarter_and_handover_year', function($row)use($request){
+                    if($row->manageProject)
+                    {
+                        if($row->manageProject->completion_status)
+                        {
+                            if($row->manageProject->completion_status == 1)
+                            {
+                                if($request->status == 'listing')
+                                {
+                                    return 'Ready to Move In';
+                                }
+                                else if($request->status == 'ready_listing')
+                                {
+                                    return 'Ready to Move';
+                                }
+                                else
+                                {
+                                    return 'Ready';
+                                }
+                            }
+
+                            if($row->manageProject->completion_status == 2)
+                            {
+                                return ($row->manageProject->quarter && $row->manageProject->handover_year) ? $row->manageProject->quarter .', '. $row->manageProject->handover_year : '-';
+                            }
+                        }
+                        else
+                        {
+                            if($row->ready_status)
+                            {
+                                if($request->status == 'listing')
+                                {
+                                    return 'Ready to Move In';
+                                }
+                                else if($request->status == 'ready_listing')
+                                {
+                                    return 'Ready to Move';
+                                }
+                                else
+                                {
+                                    return 'Ready';
+                                }
+                            }
+                            else
+                            {
+                                return ($row->manageProject->quarter && $row->manageProject->handover_year) ? $row->manageProject->quarter .', '. $row->manageProject->handover_year : '-';
+                            }
+                        }
+                    }
+                    return '-';
                 })
-                ->addColumn('up_to_handover', function ($row) {
-                    return $row->up_to_handover ? number_format($row->up_to_handover, 2, '.', ',') : '-';
+                ->addColumn('up_to_handover', function($row){
+                    return $row->up_to_handover ? number_format($row->up_to_handover,2, '.', ',') : '-';
                 })
-                ->addColumn('post_handover', function ($row) {
-                    return $row->post_handover ? number_format($row->post_handover, 2, '.', ',') : '-';
+                ->addColumn('post_handover', function($row){
+                    return $row->post_handover ? number_format($row->post_handover,2, '.', ',') : '-';
                 })
-                ->addColumn('ready_status', function ($row) {
+                ->addColumn('ready_status', function($row){
                     $check = $row->ready_status ? 'checked' : '';
-                    $disable = (Auth::user()->role != 3) ? '' : ' disabled';
-                    return "<div class='custom-control custom-switch'><input type='checkbox' class='custom-control-input' id='customSwitch" . $row->id . "' data-id='" . $row->id . "' onclick='fn_project_status_changes(this)' value='1' " . $check . $disable . " ><label class='custom-control-label' for='customSwitch" . $row->id . "'>Ready</label></div>";
+                    return "<div class='custom-control custom-switch'><input type='checkbox' class='custom-control-input' id='customSwitch".$row->id."' data-id='". $row->id ."' onclick='fn_project_status_changes(this)' value='1' ".$check." ><label class='custom-control-label' for='customSwitch".$row->id."'>Ready</label></div>";
                 })
-                ->addColumn('sold_out_status', function ($row) {
+                ->addColumn('sold_out_status', function($row){
                     $check = $row->sold_out_status ? 'checked' : '';
-                    $disable = (Auth::user()->role == 1 || Auth::id() == $row->user_id && Auth::user()->role != 3) ? '' : ' disabled';
-                    return "<div class='custom-control custom-switch'><input type='checkbox' class='custom-control-input' id='customSwitchsoldout" . $row->id . "' data-id='" . $row->id . "' onclick='sold_out_project_status_changes(this)' value='1' " . $check . $disable . " ><label class='custom-control-label' for='customSwitchsoldout" . $row->id . "'>Sold Out</label></div>";
+                    return "<div class='custom-control custom-switch'><input type='checkbox' class='custom-control-input' id='customSwitchsoldout".$row->id."' data-id='". $row->id ."' onclick='sold_out_project_status_changes(this)' value='1' ". $check ." ><label class='custom-control-label' for='customSwitchsoldout".$row->id."'>Sold Out</label></div>";
                 })
-                ->addColumn('updated_at', function ($row) {
-                    return $row->updated_at ? date('d-M-y', strtotime($row->updated_at)) : '-';
+                ->addColumn('updated_at', function($row){
+                    return $row->updated_at ? $row->updated_at : '-';
                 })
-                ->addColumn('action', function ($row) use ($status, $permission) {
+                ->addColumn('action', function($row) use($status, $permission,$copyUnitRoute,$previewUnit){
                     $notes = $row->notes ? $row->notes : '';
                     $name = ($row->notes && $row->developer) ? $row->developer->company : '';
                     $reminderlist = $row->reminder ? $row->reminder : '';
@@ -197,12 +357,36 @@ class ManageController extends Controller
                                     </div>
                                     </div>
                               </div>';
-                        $copy = $permission->create ? $copy_html : '';
+                        $copy = '';
                         $preview = $permission->read ? $preview_html : '';
-                        $edit = $permission->update ? $edit_html : '';
-                        $delete = $permission->delete ? $delete_html : '';
-                        $note = $permission->create ? $note_html : '';
-                        $reminder = $permission->create ? $reminder_html : '';
+                        $edit = '';
+                        $delete = '';
+                        $note = '';
+                        $reminder = '';
+                        if(Auth::user()->role == 1)
+                        {
+                            $copy = $permission->create ? $copy_html : '';
+                            $preview = $permission->read ? $preview_html : '';
+                            $edit = $permission->update ? $edit_html : '';
+                            $delete = $permission->delete ? $delete_html : '';
+                            $note = $permission->create ? $note_html : '';
+                            $reminder = $permission->create ? $reminder_html : '';
+                        }
+                        else
+                        {
+                            if($row->projectAssignAgents)
+                            {
+                                if($row->projectAssignAgents->agent_id == Auth::user()->id)
+                                {
+                                    $copy = $permission->create ? $copy_html : '';
+                                    $preview = $permission->read ? $preview_html : '';
+                                    $edit = $permission->update ? $edit_html : '';
+                                    $delete = $permission->delete ? $delete_html : '';
+                                    $note = $permission->create ? $note_html : '';
+                                    $reminder = $permission->create ? $reminder_html : '';
+                                }
+                            }
+                        }
                         $flags = ($status == 'listing' || $status == 'ready_listing')? $flags_html :'' ;
 
                         return '<div class="row">' . $copy . '' . $preview . '' . $edit . '' . $delete . '' . $note . '' . $reminder . '' . $flags . '</div>';
@@ -210,106 +394,106 @@ class ManageController extends Controller
                         return '-';
                     }
                 })
-                ->filter(function ($query) use ($request) {
-
-                    $input = $this->objectToArray($request->all());
-
-                    if (isset($input['developer'])) {
-                        $name = $input['developer'];
-                        $query = $query->whereHas('developer', function ($query) use ($name) {
-                            $query->where('person', $name);
-                        });
-                    }
-                    if (isset($input['outdated_status'])) {
-                        $query = $query->whereHas('reminder', function ($query) {
-                            $query->whereDate('reminder_date', '<=', Carbon\Carbon::now('Europe/Stockholm'))->where('status', 0);
-                        });
-                    }
-                    if (isset($input['company'])) {
-                        $company = $input['company'];
-                        $query = $query->whereHas('developer', function ($query) use ($company) {
-                            $query->where('company', $company);
-                        });
-                    }
-                    if (isset($input['community'])) {
-                        $query = $query->where('community', $input['community']);
-                    }
-                    if (isset($input['subcommunity'])) {
-                        $query = $query->where('subcommunity', $input['subcommunity']);
-                    }
-                    if (isset($input['handover'])) {
-                        $query = $query->where('handover', $input['handover']);
-                    }
-                    if (isset($input['amount-upto-handover'])) {
-                        $query = $query->where('up_to_handover', '<=', $input['amount-upto-handover']);
-                    }
-                    if (isset($input['post-handover'])) {
-                        $query = $query->where('post_handover', '<=', $input['post-handover']);
-                    }
-                    if (isset($input['location'])) {
-                        $query = $query->where('location', 'LIKE', '%' . $input['location'] . '%');
-                    }
-                    if (isset($input['project'])) {
-                        $query = $query->where('project', $input['project']);
-                    }
-                    if (isset($input['property'])) {
-                        $query = $query->where('property', $input['property']);
-                    }
-                    if (isset($input['min_price']) || isset($input['max_price'])) {
-                        if (empty($input['min_price'])) {
-                            $min_price = '0';
-                            $max_price = $input['max_price'];
-                            $query = $query->where('price', '<=', $max_price);
-                        } else if (empty($input['max_price'])) {
-                            $min_price = $input['min_price'];
-                            $max_price = '0';
-                            $query = $query->where('price', '>=', $min_price);
-                        } else {
-                            $min_price = $input['min_price'];
-                            $max_price = $input['max_price'];
-                            $query = $query->whereBetween('price', [$min_price, $max_price]);
-                        }
-                    }
-                    if (isset($input['min_size']) || isset($input['max_size'])) {
-                        if (empty($input['min_size'])) {
-                            $min_size = '0';
-                            $max_size = $input['max_size'];
-                            $query = $query->where('size', '<=', $max_size);
-                        } else if (empty($input['max_size'])) {
-                            $min_size = $input['min_size'];
-                            $max_size = '0';
-                            $query = $query->where('size', '>=', $min_size);
-                        } else {
-                            $min_size = $input['min_size'];
-                            $max_size = $input['max_size'];
-                            $query = $query->whereBetween('size', [$min_size, $max_size]);
-                        }
-                    }
-                    if (isset($input['bedrooms'])) {
-                        $query = $query->where('bedrooms', $input['bedrooms']);
-                    }
-                    if (isset($input['handover_year'])) {
-                        $query = $query->where('handover_year', $input['handover_year']);
-                    }
-                    if (isset($input['quarter'])) {
-                        $query = $query->where('quarter', $input['quarter']);
-                    }
-                    if (isset($input['construction_status'])) {
-                        $query = $query->where('construction_status', $input['construction_status']);
-                    }
-                    if (isset($input['payment_plan'])) {
-                        $query = $query->where('payment_plan', $input['payment_plan']);
-                    }
-                    if (isset($input['ready_status'])) {
-                        $query = $query->where('ready_status', $input['ready_status']);
-                    }
-                    if (isset($input['sold_out_status'])) {
-                        $query = $query->where('sold_out_status', $input['sold_out_status']);
-                    }
-                    if (isset($input['flag'])) {
-                        $query = $query->whereIn('flag', $input['flag']);
-                    }
-                })
+//                ->filter(function ($query) use ($request) {
+//
+//                    $input = $this->objectToArray($request->all());
+//
+//                    if (isset($input['developer'])) {
+//                        $name = $input['developer'];
+//                        $query = $query->whereHas('developer', function ($query) use ($name) {
+//                            $query->where('person', $name);
+//                        });
+//                    }
+//                    if (isset($input['outdated_status'])) {
+//                        $query = $query->whereHas('reminder', function ($query) {
+//                            $query->whereDate('reminder_date', '<=', Carbon\Carbon::now('Europe/Stockholm'))->where('status', 0);
+//                        });
+//                    }
+//                    if (isset($input['company'])) {
+//                        $company = $input['company'];
+//                        $query = $query->whereHas('developer', function ($query) use ($company) {
+//                            $query->where('company', $company);
+//                        });
+//                    }
+//                    if (isset($input['community'])) {
+//                        $query = $query->where('community', $input['community']);
+//                    }
+//                    if (isset($input['subcommunity'])) {
+//                        $query = $query->where('subcommunity', $input['subcommunity']);
+//                    }
+//                    if (isset($input['handover'])) {
+//                        $query = $query->where('handover', $input['handover']);
+//                    }
+//                    if (isset($input['amount-upto-handover'])) {
+//                        $query = $query->where('up_to_handover', '<=', $input['amount-upto-handover']);
+//                    }
+//                    if (isset($input['post-handover'])) {
+//                        $query = $query->where('post_handover', '<=', $input['post-handover']);
+//                    }
+//                    if (isset($input['location'])) {
+//                        $query = $query->where('location', 'LIKE', '%' . $input['location'] . '%');
+//                    }
+//                    if (isset($input['project'])) {
+//                        $query = $query->where('project', $input['project']);
+//                    }
+//                    if (isset($input['property'])) {
+//                        $query = $query->where('property', $input['property']);
+//                    }
+//                    if (isset($input['min_price']) || isset($input['max_price'])) {
+//                        if (empty($input['min_price'])) {
+//                            $min_price = '0';
+//                            $max_price = $input['max_price'];
+//                            $query = $query->where('price', '<=', $max_price);
+//                        } else if (empty($input['max_price'])) {
+//                            $min_price = $input['min_price'];
+//                            $max_price = '0';
+//                            $query = $query->where('price', '>=', $min_price);
+//                        } else {
+//                            $min_price = $input['min_price'];
+//                            $max_price = $input['max_price'];
+//                            $query = $query->whereBetween('price', [$min_price, $max_price]);
+//                        }
+//                    }
+//                    if (isset($input['min_size']) || isset($input['max_size'])) {
+//                        if (empty($input['min_size'])) {
+//                            $min_size = '0';
+//                            $max_size = $input['max_size'];
+//                            $query = $query->where('size', '<=', $max_size);
+//                        } else if (empty($input['max_size'])) {
+//                            $min_size = $input['min_size'];
+//                            $max_size = '0';
+//                            $query = $query->where('size', '>=', $min_size);
+//                        } else {
+//                            $min_size = $input['min_size'];
+//                            $max_size = $input['max_size'];
+//                            $query = $query->whereBetween('size', [$min_size, $max_size]);
+//                        }
+//                    }
+//                    if (isset($input['bedrooms'])) {
+//                        $query = $query->where('bedrooms', $input['bedrooms']);
+//                    }
+//                    if (isset($input['handover_year'])) {
+//                        $query = $query->where('handover_year', $input['handover_year']);
+//                    }
+//                    if (isset($input['quarter'])) {
+//                        $query = $query->where('quarter', $input['quarter']);
+//                    }
+//                    if (isset($input['construction_status'])) {
+//                        $query = $query->where('construction_status', $input['construction_status']);
+//                    }
+//                    if (isset($input['payment_plan'])) {
+//                        $query = $query->where('payment_plan', $input['payment_plan']);
+//                    }
+//                    if (isset($input['ready_status'])) {
+//                        $query = $query->where('ready_status', $input['ready_status']);
+//                    }
+//                    if (isset($input['sold_out_status'])) {
+//                        $query = $query->where('sold_out_status', $input['sold_out_status']);
+//                    }
+//                    if (isset($input['flag'])) {
+//                        $query = $query->whereIn('flag', $input['flag']);
+//                    }
+//                })
                 ->rawColumns(['rf_no', 'flag', 'developer_company', 'project', 'communitys', 'property', 'bedrooms', 'size', 'price', 'quarter_and_handover_year', 'up_to_handover', 'post_handover', 'ready_status', 'sold_out_status', 'updated_at', 'action'])
                 ->make(true);
         } catch (\Exception $ex) {
@@ -375,34 +559,61 @@ class ManageController extends Controller
     public function addviewunit()
     {
         try {
-            $developer = new Developer;
-            $mytime = Carbon::now();
-            $developer = $developer->orderBy('company')->pluck('company', 'id');
-
-
-            $developerData = [];
-            if ($developer) {
-                $developerData = $developer;
-            }
-
-            $community = Community::orderBy('name')->get();
-
-            $milestone = Milestones::pluck('milestone', 'id');
-            $milestoneData = [];
-            if ($milestone) {
-                $milestoneData = $milestone;
-            }
-
-            $typeList = Categories::orderBy('catName')->pluck('catName');
-
+            $milestoneData = Milestones::pluck('milestone','id');
             $featuresList = Features::orderBy('fname')->get();
-
-            return view('Admin.Add-units', compact('developerData', 'milestoneData', 'community', 'typeList', 'featuresList'));
+            if(Auth::user()->role == 2)
+            {
+                $projectAssignAgents = ProjectAssignAgents::where('agent_id',Auth::user()->id)->pluck('project_id');
+                $project = ManageProject::whereIn('id',$projectAssignAgents)->distinct()->orderBy('project')->pluck('project','id');
+            }
+            else
+            {
+                $project = ManageProject::distinct()->orderBy('project')->pluck('project','id');
+            }
+            return view('Admin.Add-units',compact('milestoneData','featuresList','project'));
         } catch (NotFoundHttpException $ex) {
             return $this->notFoundRequest($ex);
         } catch (\Exception $ex) {
             return $this->sendErrorResponse($ex);
         }
+    }
+
+    public function getProjectData(Request $request)
+    {
+        $manageProject = ManageProject::select('id','description','image','pdf','payment_plan','features')->with('paymentPlanDetails')->find($request->id);
+        $imageName = array();
+        $imageLink = array();
+        $pdfName = array();
+        $pdfLink = array();
+        if($manageProject->image)
+        {
+            foreach(json_decode($manageProject->image) as $image)
+            {
+                $imageName[] = $image;
+                $imageLink[] = asset('public/projectFiles/images').'/'.$image;
+            }
+
+        }
+
+        if($manageProject->pdf)
+        {
+            foreach(json_decode($manageProject->pdf) as $pdf)
+            {
+                $pdfName[] = $pdf;
+            }
+
+            $projectDocuments = ProjectDocuments::where('project_id',$request->id)->get();
+            foreach($projectDocuments as $file)
+            {
+                $pdfName[] = $file->document_name;
+            }
+        }
+
+        $manageProject['imageLink'] = $imageLink;
+        $manageProject['imageName'] = $imageName;
+        $manageProject['pdfName'] = $pdfName;
+        $manageProject['pdfLink'] = $pdfLink;
+        return response()->json($manageProject);
     }
 
     public function viewproject($id,$userid)
@@ -431,56 +642,470 @@ class ManageController extends Controller
         $encryption_key = "123456";
         $user_id = Auth::id();
         $encrypt_userid = openssl_encrypt($user_id, $encryption, $encryption_key, $options, $encryption_userid);
-        $manage_listings = ManageListings::with('developer', 'paymentplan', 'community', 'subcommunity','user')->where('id', $id)->first();
-        $community = Community::orderBy('name')->where('id', $manage_listings->community)->get();
-        $subcommunity = Subcommunity::orderBy('name')->where('id', $manage_listings->subcommunity)->get();
+        $manage_listings = ManageListings::with('developer', 'paymentplan', 'community', 'subcommunity','user','manageProject')->where('id', $id)->first();
+        $community = '';
+        $subcommunity = '';
+        $projectAssignAgents = '';
+        if($manage_listings)
+        {
+            if($manage_listings->manageProject)
+            {
+                $community = Community::where('id',$manage_listings->manageProject->community)->first();
+                $subcommunity = Subcommunity::where('id',$manage_listings->manageProject->subcommunity)->first();
+            }
+            if(Auth::user()->role == 1)
+            {
+                $projectAssignAgents = true;
+            }
+            else
+            {
+                $projectAssignAgents = ProjectAssignAgents::where('project_id',$manage_listings->project_id)->where('agent_id',Auth::user()->id)->first();
+            }
+        }
         $note = Note::where('proj_id', $id)->get();
         $unitmultipleattachment = UnitMultipleAttachment::where('project_id', $id)->get();
         $permission = Permission_role_mapping::where('user_id', Auth::user()->id)->where('permissions_id', 5)->first();
-        return view('Admin.preview_project', compact('manage_listings', 'community', 'subcommunity', 'note', 'unitmultipleattachment', 'permission','encrypt_userid'));
+        return view('Admin.preview_project', compact('manage_listings', 'community', 'subcommunity', 'note', 'unitmultipleattachment', 'permission','encrypt_userid','projectAssignAgents'));
+    }
+
+    public function localImageSaveUnit(Request $request)
+    {
+        try {
+            if($request->local_image_id != null)
+            {
+                $projectCheck = ManageProject::select('id','image','pdf','project','ready_status')->where('id',$request->project)->first();
+                if(!$projectCheck)
+                {
+                    return response()->json(['status' => 0, 'message' => 'Project not found']);
+                }
+                $projectImageArray = $projectCheck->image ? json_decode($projectCheck->image,true) : array();
+
+                $localDataUpdate = LocalImage::where('local_image_id',$request->local_image_id)->first();
+                if($localDataUpdate)
+                {
+                    $decode_image = $localDataUpdate->local_image_file ? json_decode($localDataUpdate->local_image_file) : NULL;
+
+                    foreach($request->localSaveImage as $key => $file)
+                    {
+                        if(in_array($file,$decode_image))
+                        {
+                            $image_name = $file;
+                        }
+                        else if(in_array($file,$projectImageArray))
+                        {
+                            File::copy(public_path('projectFiles/images/'.$file), public_path('localSaveImage/'.$file));
+                            $image_name = $file;
+                        }
+                        else
+                        {
+                            $mimeType = $file->getMimeType();
+                            if(!$mimeType)
+                            {
+                                return response()->json(['status' => 0, 'message' => 'mime type does not exist']);
+                            }
+                            if( $mimeType == "inode/x-empty"  || $mimeType == "application/x-empty")
+                            {
+                                $image_name = $file->getClientOriginalName();
+                            }
+                            else
+                            {
+                                $image_name = rand(111111,999999).'_'.time().'-'.$file->getClientOriginalName();
+                                $img = Image::make($file->getRealPath())->resize(600, 400);
+//                                $watermark = Image::make('public/files/logo.png');
+//                                $img->insert($watermark, 'center', 5, 5);
+                                $img->save('public/localSaveImage/'.$image_name);
+                            }
+                        }
+                        $data[$key] = $image_name;
+                    }
+                    ksort($data);
+
+                    $localDataUpdate->local_image_file = json_encode($data);
+                    $localDataUpdate->save();
+
+                    return response()->json(['status' => 1, 'local_image_id' => $localDataUpdate->local_image_id, 'message' => 'successfully saved.']);
+                }
+                else
+                {
+                    foreach($request->localSaveImage as $key => $file)
+                    {
+                        if(in_array($file,$projectImageArray))
+                        {
+                            File::copy(public_path('projectFiles/images/'.$file), public_path('localSaveImage/'.$file));
+                            $image_name = $file;
+                        }
+                        else
+                        {
+                            $mimeType = $file->getMimeType();
+                            if(!$mimeType)
+                            {
+                                return response()->json(['status' => 0, 'message' => 'mime type does not exist']);
+                            }
+                            if( $mimeType == "inode/x-empty"  || $mimeType == "application/x-empty")
+                            {
+                                $image_name = $file->getClientOriginalName();
+                            }
+                            else
+                            {
+                                $image_name = rand(111111,999999).'_'.time().'-'.$file->getClientOriginalName();
+                                $img = Image::make($file->getRealPath())->resize(600, 400);
+//                                $watermark = Image::make('public/files/logo.png');
+//                                $img->insert($watermark, 'center', 5, 5);
+                                $img->save('public/localSaveImage/'.$image_name);
+                            }
+                        }
+                        $data[$key] = $image_name;
+                    }
+                    ksort($data);
+
+                    $localData['local_image_id'] = $request->local_image_id;
+                    $localData['local_image_file'] = json_encode($data);
+                    $localDataCreate = LocalImage::create($localData);
+                    if($localDataCreate)
+                    {
+                        return response()->json(['status' => 1, 'local_image_id' => $localData['local_image_id'], 'message' => 'successfully saved.']);
+                    }
+                    else
+                    {
+                        return response()->json(['status' => 0, 'message' => 'Something went wrong!']);
+                    }
+                }
+            }
+            else
+            {
+                return response()->json(['status' => 0, 'message' => 'Something went wrong!']);
+            }
+
+        } catch (\Exception $ex) {
+            return $this->sendErrorResponse($ex);
+        }
     }
 
     public function submitunit(Request $request, $parentId = null)
     {
         try {
             $input = $this->objectToArray($request->input());
+
+            $projectCheck = ManageProject::select('id','image','pdf','project','ready_status')->where('id',$request->project)->first();
+            if(!$projectCheck)
+            {
+                return response()->json(['status' => 0, 'message' => 'Project not found']);
+            }
+
             $requiredParams = $this->requiredRequestParams('create');
             $validator = Validator::make($input, $requiredParams);
 
             if ($validator->fails()) {
-                $errorMessage = implode('<br> <li>', $validator->errors()->all());
-                $response['status'] = 0;
-                $response['message'] = $errorMessage;
-                if ($request->ajax()) {
-                    $data['status'] = 0;
-                    $data['message'] = $errorMessage;
-                    return response()->json($data);
-                }
-                session()->flash('response', $response);
-                return redirect()->back();
+                return response()->json(['status' => 0, 'message' => implode('<br> <li>', $validator->errors()->all())]);
             }
 
             if ($request->get('featuresList')) {
                 $input['features'] = json_encode($input['featuresList']);
             }
 
+            $projectImageArray = $projectCheck->image ? json_decode($projectCheck->image,true) : array();
+
             $input['user_id'] = Auth::user()->id;
+
+            $data = array();
+            if($request->local_image_id)
+            {
+                $localDataGet = LocalImage::where('local_image_id',$request->local_image_id)->first();
+                if($localDataGet)
+                {
+                    $image = json_decode($localDataGet->local_image_file);
+                    foreach($image as $value)
+                    {
+                        File::copy(public_path('localSaveImage/'.$value), public_path('files/profile/'.$value));
+                        if (file_exists(public_path('/localSaveImage/'.$value))) {
+                            @unlink(public_path('/localSaveImage/'.$value));
+                        }
+                    }
+                    $input['image'] = $localDataGet->local_image_file;
+                    $localDataGet->delete();
+                }
+            }
+
+//            if ($request->hasfile('filesList')) {
+//                foreach ($request->file('filesList') as $file) {
+//                    $mimeType = $file->getMimeType();
+//                    if (!$mimeType) {
+//                        if ($request->ajax()) {
+//                            $data['status'] = 0;
+//                            $data['message'] = $errorMessage;
+//
+//                            return response()->json($data);
+//                        }
+//                    }
+//                    if ($mimeType == "inode/x-empty" || $mimeType == "application/x-empty") {
+//                        $image_name = $file->getClientOriginalName();
+//                    } else {
+//                        $image_name = time() . '-' . $file->getClientOriginalName();
+//                        $img = Image::make($file->getRealPath())->resize(600, 400);
+////                        $watermark = Image::make('public/files/logo.png');
+////                        $img->insert($watermark, 'center', 5, 5);
+//                        $img->save('public/files/profile/' . $image_name);
+//                    }
+//                    $data[] = $image_name;
+//                }
+//                $input['image'] = json_encode($data);
+//            }
+
+            if($request->hasfile('floor_plan_image'))
+            {
+                foreach($request->file('floor_plan_image') as $file)
+                {
+                    $mimeType = $file->getMimeType();
+                    if(!$mimeType)
+                    {
+                        return response()->json(['status' => 0, 'message' => $errorMessage]);
+                    }
+                    if($mimeType == "inode/x-empty" || $mimeType == "application/x-empty")
+                    {
+                        $image_name = $file->getClientOriginalName();
+                    }
+                    else
+                    {
+                        $image_name = rand(111111,999999).'_'.time().'-'.$file->getClientOriginalName();
+                        $file->move(public_path('files/profile'), $image_name);
+                    }
+                    $data1[] = $image_name;
+                }
+                $input['floor_plan_image']=json_encode($data1);
+            }
+
+            if($request->hasfile('video'))
+            {
+                foreach($request->file('video') as $file)
+                {
+                    $mimeType = $file->getMimeType();
+                    if(!$mimeType)
+                    {
+                        return response()->json(['status' => 0, 'message' => $errorMessage]);
+                    }
+                    if($mimeType == "inode/x-empty" || $mimeType == "application/x-empty")
+                    {
+                        $image_name = $file->getClientOriginalName();
+                    }
+                    else
+                    {
+                        $image_name = rand(111111,999999).'_'.time().'-'.$file->getClientOriginalName();
+                        $file->move(public_path('files/profile'), $image_name);
+                    }
+                    $data2[] = $image_name;
+                }
+                $input['video'] = json_encode($data2);
+            }
+
+            $projectPdfArray = $projectCheck->pdf ? json_decode($projectCheck->pdf,true) : array();
+            $projectDocuments = ProjectDocuments::where('project_id',$projectCheck->id)->pluck('document_name')->toArray();
+
+            $dataPdf = array();
+            if($request->pdfList)
+            {
+                foreach($request->pdfList as $key => $file)
+                {
+                    if(in_array($file, $projectPdfArray))
+                    {
+                        File::copy(public_path('projectFiles/pdf/'.$file), public_path('files/profile/'.$file));
+                        $pdfName = $file;
+                    }
+                    else if(in_array($file, $projectDocuments))
+                    {
+                        $projectDocumentsOriginaName = ProjectDocuments::where('project_id',$projectCheck->id)->where('document_name',$file)->first();
+                        $pdfDocumentName = json_decode($projectDocumentsOriginaName->document_file,true);
+                        File::copy(public_path('projectFiles/documents/'.$pdfDocumentName), public_path('files/profile/'.$pdfDocumentName));
+                        $pdfName = $file;
+                    }
+                    else
+                    {
+                        if($request->hasfile('pdfList'))
+                        {
+                            $mimeType = $file->getMimeType();
+                            if(!$mimeType)
+                            {
+                                return response()->json(['status' => 0, 'message' => $errorMessage]);
+                            }
+                            if($mimeType == "inode/x-empty" || $mimeType == "application/x-empty")
+                            {
+                                $pdfName = $file->getClientOriginalName();
+                            }
+                            else
+                            {
+                                $pdfName = rand(111111,999999).'_'.time().'-'.$file->getClientOriginalName();
+                                $file->move(public_path('files/profile'), $pdfName);
+                            }
+                        }
+                    }
+                    $dataPdf[$key] = $pdfName;
+                }
+                ksort($dataPdf);
+                $input['pdf'] = json_encode($dataPdf);
+            }
+
+            $checkindex = $this->checkindex();
+            if($checkindex == null)
+            {
+                $index_key = 1;
+                if($index_key < 10)
+                {
+                    $index_key = sprintf('%02u', $index_key);
+                }
+            }
+            else
+            {
+                $index_key = $checkindex + 1;
+                if($index_key < 10)
+                {
+                    $index_key = sprintf('%02u', $index_key);
+                }
+            }
+
+            $input['index_key'] = $index_key;
+
+            if($input['payment_plan'] == "Yes")
+            {
+                $input['payment_plan'] = 0;
+                if($input['pre_handover_amount'] && $input['handover_amount'])
+                {
+                    $input['up_to_handover'] = (int)$input['pre_handover_amount'] + (int)$input['handover_amount'];
+                    $input['post_handover'] = (int)$input['post_handover_amount'];
+                }
+            }
+            else
+            {
+                $input['payment_plan'] = 1;
+                $input['up_to_handover'] = $input['price'];
+                $input['post_handover'] = 0;
+            }
+
+            $input['project'] = $projectCheck->project;
+            $input['project_id'] = $projectCheck->id;
+            $input['ready_status'] = $projectCheck->ready_status;
+            $project = ManageListings::create($input);
+
+            if(Auth::user()->role == 1)
+            {
+                $input['rf_no'] = 'GS'.$index_key;
+                $update = ManageListings::where('id',$project->id)->update(['rf_no'=>$input['rf_no'],'index_key'=>$index_key]);
+            }
+            else
+            {
+                $rf_no = Auth::user()->user_code;
+                $input['rf_no'] = $rf_no.$index_key;
+                $update = ManageListings::where('id',$project->id)->update(['rf_no'=>$input['rf_no'],'user_id'=> $input['user_id'],'index_key'=>$index_key]);
+            }
+
+            if($input['payment_plan'] == "Yes")
+            {
+                if(!empty($input['milestone']))
+                {
+                    $payment['project_id'] = $project->id;
+                    foreach ($input['milestone'] as $key => $value)
+                    {
+                        if(!empty($value['milestones']))
+                        {
+                            $payment['installment_terms'] = $value['installment_terms'] ? $value['installment_terms'] : 0;
+                            $payment['milestone'] = $value['milestones'];
+                            $payment['percentage'] = $value['percentage'] ? $value['percentage'] : 0;
+                            $payment['amount'] = $value['amount'] ? $value['amount'] : 0;
+                            $paymentplan = Paymentplan::create($payment);
+                        }
+                    }
+                }
+            }
+
+            if($project)
+            {
+                $projectDocuments = ProjectDocuments::where('project_id',$project->project_id)->get();
+                foreach($projectDocuments as $data)
+                {
+                    $extension = explode('.', json_decode($data->document_file));
+                    if(count($extension) == 2)
+                    {
+                        $pdf_name = rand(111111,999999).'_'.time().'.'.$extension[1];
+
+                        File::copy(public_path('projectFiles/documents/'.json_decode($data->document_file),true), public_path('project_attachment/'.$pdf_name));
+
+                        $attachment['user_id'] = Auth::user()->id;
+                        $attachment['project_id'] = $project->id;
+                        $attachment['attachment_name'] = $data->document_name;
+                        $attachment['attachment_multiple'] = json_encode($pdf_name);
+                        UnitMultipleAttachment::create($attachment);
+                    }
+                }
+                return response()->json(['status' => 1, 'message' => 'Has been added as a project']);
+            }
+            else
+            {
+                return response()->json(['status' => 0, 'message' => 'Failed to create project']);
+            }
+
+        } catch (\Exception $ex) {
+            return $this->sendErrorResponse($ex);
+        }
+    }
+
+    public function editunit($id)
+    {
+        $project = ManageListings::with(['developer','paymentplan'])->where('id',$id)->first();
+        $developerData = Developer::orderBy('company')->pluck('company','id');
+        $milestoneData = Milestones::pluck('milestone','id');
+        $featuresList = Features::orderBy('fname')->get();
+        $projectList = ManageProject::distinct()->orderBy('project')->pluck('project','id');
+        return view('Admin.editunit',compact('project','developerData','milestoneData','featuresList','projectList'));
+    }
+
+    public function copyunit($id)
+    {
+        $project = ManageListings::with(['developer','paymentplan'])->where('id',$id)->first();
+        $developerData = Developer::orderBy('company')->pluck('company','id');
+        $milestoneData = Milestones::pluck('milestone','id');
+        $featuresList = Features::orderBy('fname')->get();
+        $projectList = ManageProject::distinct()->orderBy('project')->pluck('project','id');
+        return view('Admin.copyunit',compact('project','developerData','milestoneData','featuresList','projectList'));
+    }
+
+    public function updateunit(Request $request)
+    {
+        try {
+            $id = $request->get('id');
+            $projectCheck = ManageProject::select('id','image','pdf','project','ready_status')->where('id',$request->project)->first();
+            if(!$projectCheck)
+            {
+                return response()->json(['status' => 0, 'message' => 'Project not found']);
+            }
+            $project = ManageListings::with('paymentplan')->where('id', $id)->first();
+            if(!$project)
+            {
+                return response()->json(['status' => 0, 'message' => 'Unit not found']);
+            }
+
+            $input = $this->objectToArray($request->input());
+            $input['id'] = $id;
+            $input = $this->prepareUpdateData($input, $project->toArray());
+
+            $requiredParams = $this->requiredRequestParams('update', $id);
+            $validator = Validator::make($input, $requiredParams);
+
+            if ($validator->fails()) {
+                return response()->json(['status' => 0, 'message' => implode('<br> <li>', $validator->errors()->all())]);
+            }
+
+            if ($request->get('featuresList')) {
+                $input['features'] = json_encode($input['featuresList']);
+            }
 
             if ($request->hasfile('filesList')) {
                 foreach ($request->file('filesList') as $file) {
                     $mimeType = $file->getMimeType();
                     if (!$mimeType) {
-                        if ($request->ajax()) {
-                            $data['status'] = 0;
-                            $data['message'] = $errorMessage;
-
-                            return response()->json($data);
-                        }
+                        return response()->json(['status' => 0, 'message' => $errorMessage]);
                     }
                     if ($mimeType == "inode/x-empty" || $mimeType == "application/x-empty") {
                         $image_name = $file->getClientOriginalName();
                     } else {
-                        $image_name = time() . '-' . $file->getClientOriginalName();
+                        $image_name = rand(111111,999999).'_'.time().'-'.$file->getClientOriginalName();
                         $img = Image::make($file->getRealPath())->resize(600, 400);
 //                        $watermark = Image::make('public/files/logo.png');
 //                        $img->insert($watermark, 'center', 5, 5);
@@ -495,17 +1120,12 @@ class ManageController extends Controller
                 foreach ($request->file('floor_plan_image') as $file) {
                     $mimeType = $file->getMimeType();
                     if (!$mimeType) {
-                        if ($request->ajax()) {
-                            $data['status'] = 0;
-                            $data['message'] = $errorMessage;
-
-                            return response()->json($data);
-                        }
+                        return response()->json(['status' => 0, 'message' => $errorMessage]);
                     }
                     if ($mimeType == "inode/x-empty" || $mimeType == "application/x-empty") {
                         $image_name = $file->getClientOriginalName();
                     } else {
-                        $image_name = time() . '-' . $file->getClientOriginalName();
+                        $image_name = rand(111111,999999).'_'.time().'-'.$file->getClientOriginalName();
                         $file->move(public_path('files/profile'), $image_name);
                     }
                     $data1[] = $image_name;
@@ -517,17 +1137,12 @@ class ManageController extends Controller
                 foreach ($request->file('video') as $file) {
                     $mimeType = $file->getMimeType();
                     if (!$mimeType) {
-                        if ($request->ajax()) {
-                            $data['status'] = 0;
-                            $data['message'] = $errorMessage;
-
-                            return response()->json($data);
-                        }
+                        return response()->json(['status' => 0, 'message' => $errorMessage]);
                     }
                     if ($mimeType == "inode/x-empty" || $mimeType == "application/x-empty") {
                         $image_name = $file->getClientOriginalName();
                     } else {
-                        $image_name = time() . '-' . $file->getClientOriginalName();
+                        $image_name = rand(111111,999999).'_'.time().'-'.$file->getClientOriginalName();
                         $file->move(public_path('files/profile'), $image_name);
                     }
                     $data2[] = $image_name;
@@ -539,274 +1154,12 @@ class ManageController extends Controller
                 foreach ($request->file('pdf') as $file) {
                     $mimeType = $file->getMimeType();
                     if (!$mimeType) {
-                        if ($request->ajax()) {
-                            $data['status'] = 0;
-                            $data['message'] = $errorMessage;
-
-                            return response()->json($data);
-                        }
+                        return response()->json(['status' => 0, 'message' => $errorMessage]);
                     }
                     if ($mimeType == "inode/x-empty" || $mimeType == "application/x-empty") {
                         $image_name = $file->getClientOriginalName();
                     } else {
-                        $image_name = time() . '-' . $file->getClientOriginalName();
-                        $file->move(public_path('files/profile'), $image_name);
-                    }
-                    $data3[] = $image_name;
-                }
-                $input['pdf'] = json_encode($data3);
-            }
-
-
-            $checkindex = $this->checkindex();
-            if ($checkindex == null) {
-                $index_key = 1;
-                if ($index_key < 10) {
-                    $index_key = sprintf('%02u', $index_key);
-                }
-            } else {
-                $index_key = $checkindex + 1;
-                if ($index_key < 10) {
-                    $index_key = sprintf('%02u', $index_key);
-                }
-            }
-            // if(Auth::user()->role==1){
-            //     $input['rera_permit_no']='GS'.$index_key;
-            // } else {
-            //     $rf_no=Auth::user()->user_code;
-            //     $input['rera_permit_no']='GS'.$index_key;
-            // }
-            $input['index_key'] = $index_key;
-
-            if ($input['payment_plan'] == "Yes") {
-                $input['payment_plan'] = 0;
-                if ($input['pre_handover_amount'] && $input['handover_amount']) {
-                    $input['up_to_handover'] = (int)$input['pre_handover_amount'] + (int)$input['handover_amount'];
-                    $input['post_handover'] = (int)$input['post_handover_amount'];
-                }
-            } else {
-                $input['payment_plan'] = 1;
-                $input['up_to_handover'] = $input['price'];
-                $input['post_handover'] = 0;
-            }
-            // dd($input);
-            $project = ManageListings::create($input);
-
-            if (Auth::user()->role == 1) {
-
-                $input['rf_no'] = 'GS' . $index_key;
-                $update = ManageListings::where('id', $project->id)->update(['rf_no' => $input['rf_no'], 'index_key' => $index_key]);
-            } else {
-                $rf_no = Auth::user()->user_code;
-                $input['rf_no'] = $rf_no . $index_key;
-                $update = ManageListings::where('id', $project->id)->update(['rf_no' => $input['rf_no'], 'user_id' => $input['user_id'], 'index_key' => $index_key]);
-            }
-
-            if ($input['payment_plan'] == "Yes") {
-                $payment['project_id'] = $project->id;
-                foreach ($input['milestone'] as $key => $value) {
-                    $payment['installment_terms'] = $value['installment_terms'];
-
-                    $payment['milestone'] = $value['milestones'];
-                    $payment['percentage'] = $value['percentage'];
-
-                    $payment['amount'] = $value['amount'];
-                    $paymentplan = Paymentplan::create($payment);
-                }
-            }
-
-            if ($project) {
-                if ($request->ajax()) {
-                    $data['status'] = 1;
-                    $data['message'] = 'Has been added as a project';
-                    return response()->json($data);
-                }
-            } else {
-                if ($request->ajax()) {
-                    $data['status'] = 0;
-                    $data['message'] = "Failed to create project";
-                    return response()->json($data);
-                }
-            }
-
-        } catch (\Exception $ex) {
-            return $this->sendErrorResponse($ex);
-        }
-    }
-
-    public function editunit($id)
-    {
-        $developer = new Developer;
-        $mytime = Carbon::now();
-        $developer = $developer->orderBy('company')->pluck('company', 'id');
-        $developerData = [];
-        if ($developer) {
-            $developerData = $developer;
-        }
-
-        $milestone = Milestones::pluck('milestone', 'id');
-        $milestoneData = [];
-        if ($milestone) {
-            $milestoneData = $milestone;
-        }
-
-        $community = Community::orderBy('name')->get();
-
-        $typeList = Categories::orderBy('catName')->pluck('catName');
-
-        $featuresList = Features::orderBy('fname')->get();
-
-        $project = ManageListings::with(['developer', 'paymentplan'])->where('id', $id)->first();
-        $subcommunity = Subcommunity::where(['com_id' => $project['community']])->get();
-        return view('Admin.editunit', compact('developerData', 'typeList', 'community', 'project', 'featuresList', 'milestoneData', 'subcommunity'));
-    }
-
-    public function copyunit($id)
-    {
-        $developer = new Developer;
-        $mytime = Carbon\Carbon::now();
-        $developer = $developer->orderBy('company')->pluck('company', 'id');
-        $developerData = [];
-        if ($developer) {
-            $developerData = $developer;
-        }
-
-        $milestone = Milestones::pluck('milestone', 'id');
-        $milestoneData = [];
-        if ($milestone) {
-            $milestoneData = $milestone;
-        }
-
-        $community = Community::orderBy('name')->get();
-
-        $typeList = Categories::orderBy('catName')->pluck('catName');
-
-        $featuresList = Features::orderBy('fname')->get();
-        $project = ManageListings::with(['developer', 'paymentplan'])->where('id', $id)->first();
-        $subcommunity = Subcommunity::where(['com_id' => $project['community']])->get();
-        return view('Admin.copyunit', compact('developerData', 'typeList', 'project', 'community', 'featuresList', 'milestoneData', 'subcommunity'));
-    }
-
-    public function updateunit(Request $request)
-    {
-        try {
-            $id = $request->get('id');
-            $project = ManageListings::with('paymentplan')->where('id', $id)->first();
-            if (!($project)) {
-                $response['status'] = 0;
-                $response['message'] = 'Project not found';
-                session()->flash('response', $response);
-                return redirect()->back();
-            }
-
-            $input = $this->objectToArray($request->input());
-            $input['id'] = $id;
-            $input = $this->prepareUpdateData($input, $project->toArray());
-
-            $requiredParams = $this->requiredRequestParams('update', $id);
-            $validator = Validator::make($input, $requiredParams);
-
-            if ($validator->fails()) {
-                $errorMessage = implode('<br> <li>', $validator->errors()->all());
-                $response['status'] = 0;
-                $response['message'] = $errorMessage;
-                if ($request->ajax()) {
-                    $data['status'] = 0;
-                    $data['message'] = $errorMessage;
-                    return response()->json($data);
-                }
-                session()->flash('response', $response);
-                return redirect()->back();
-            }
-
-            if ($request->get('featuresList')) {
-                $input['features'] = json_encode($input['featuresList']);
-            }
-
-            if ($request->hasfile('filesList')) {
-                foreach ($request->file('filesList') as $file) {
-                    $mimeType = $file->getMimeType();
-                    if (!$mimeType) {
-                        if ($request->ajax()) {
-                            $data['status'] = 0;
-                            $data['message'] = $errorMessage;
-
-                            return response()->json($data);
-                        }
-                    }
-                    if ($mimeType == "inode/x-empty" || $mimeType == "application/x-empty") {
-                        $image_name = $file->getClientOriginalName();
-                    } else {
-                        $image_name = time() . '-' . $file->getClientOriginalName();
-                        $img = Image::make($file->getRealPath())->resize(600, 400);
-                        $watermark = Image::make('public/files/logo.png');
-                        $img->insert($watermark, 'center', 5, 5);
-                        $img->save('public/files/profile/' . $image_name);
-                    }
-                    $data[] = $image_name;
-                }
-                $input['image'] = json_encode($data);
-            }
-
-            if ($request->hasfile('floor_plan_image')) {
-                foreach ($request->file('floor_plan_image') as $file) {
-                    $mimeType = $file->getMimeType();
-                    if (!$mimeType) {
-                        if ($request->ajax()) {
-                            $data['status'] = 0;
-                            $data['message'] = $errorMessage;
-
-                            return response()->json($data);
-                        }
-                    }
-                    if ($mimeType == "inode/x-empty" || $mimeType == "application/x-empty") {
-                        $image_name = $file->getClientOriginalName();
-                    } else {
-                        $image_name = time() . '-' . $file->getClientOriginalName();
-                        $file->move(public_path('files/profile'), $image_name);
-                    }
-                    $data1[] = $image_name;
-                }
-                $input['floor_plan_image'] = json_encode($data1);
-            }
-
-            if ($request->hasfile('video')) {
-                foreach ($request->file('video') as $file) {
-                    $mimeType = $file->getMimeType();
-                    if (!$mimeType) {
-                        if ($request->ajax()) {
-                            $data['status'] = 0;
-                            $data['message'] = $errorMessage;
-
-                            return response()->json($data);
-                        }
-                    }
-                    if ($mimeType == "inode/x-empty" || $mimeType == "application/x-empty") {
-                        $image_name = $file->getClientOriginalName();
-                    } else {
-                        $image_name = time() . '-' . $file->getClientOriginalName();
-                        $file->move(public_path('files/profile'), $image_name);
-                    }
-                    $data2[] = $image_name;
-                }
-                $input['video'] = json_encode($data2);
-            }
-
-            if ($request->hasfile('pdf')) {
-                foreach ($request->file('pdf') as $file) {
-                    $mimeType = $file->getMimeType();
-                    if (!$mimeType) {
-                        if ($request->ajax()) {
-                            $data['status'] = 0;
-                            $data['message'] = $errorMessage;
-
-                            return response()->json($data);
-                        }
-                    }
-                    if ($mimeType == "inode/x-empty" || $mimeType == "application/x-empty") {
-                        $image_name = $file->getClientOriginalName();
-                    } else {
-                        $image_name = time() . '-' . $file->getClientOriginalName();
+                        $image_name = rand(111111,999999).'_'.time().'-'.$file->getClientOriginalName();
                         $file->move(public_path('files/profile'), $image_name);
                     }
                     $data3[] = $image_name;
@@ -829,6 +1182,9 @@ class ManageController extends Controller
                 $input['post_handover'] = 0;
             }
 
+            $input['project'] = $projectCheck->project;
+            $input['project_id'] = $projectCheck->id;
+            $input['ready_status'] = $projectCheck->ready_status;
             $projectUpdate = $project->update($input);
 
             $project = ManageListings::find($id);
@@ -837,37 +1193,29 @@ class ManageController extends Controller
                 $payments = Paymentplan::where('project_id', $id)->pluck('id');
                 foreach ($input['milestone'] as $key => $value) {
                     if (array_key_exists('id', $value)) {
-                        $payment['installment_terms'] = $value['installment_terms'];
+                        $payment['installment_terms'] = $value['installment_terms'] ? $value['installment_terms'] : 0;
                         $payment['milestone'] = $value['milestones'];
-                        $payment['percentage'] = $value['percentage'];
-                        $payment['amount'] = $value['amount'];
+                        $payment['percentage'] = $value['percentage'] ? $value['percentage'] : 0;
+                        $payment['amount'] = $value['amount'] ? $value['amount'] : 0;
                         $paymentplan = Paymentplan::where(['project_id' => $id, 'id' => $value['id']])->update($payment);
                     } else {
                         $payment['project_id'] = $project->id;
-                        $payment['installment_terms'] = $value['installment_terms'];
+                        $payment['installment_terms'] = $value['installment_terms'] ? $value['installment_terms'] : 0;
                         $payment['milestone'] = $value['milestones'];
-                        $payment['percentage'] = $value['percentage'];
-                        $payment['amount'] = $value['amount'];
+                        $payment['percentage'] = $value['percentage'] ? $value['percentage'] : 0;
+                        $payment['amount'] = $value['amount'] ? $value['amount'] : 0;
                         $paymentplan = Paymentplan::create($payment);
                     }
                 }
             }
 
             if ($projectUpdate) {
-                if ($request->ajax()) {
-                    $data['status'] = 1;
-                    $data['message'] = 'Has been updated as a project';
-                    return response()->json($data);
-                }
+                return response()->json(['status' => 1, 'message' => 'Has been updated as a project']);
             } else {
-                if ($request->ajax()) {
-                    $data['status'] = 0;
-                    $data['message'] = "Failed to update project details";
-                    return response()->json($data);
-                }
+                return response()->json(['status' => 0, 'message' => "Failed to update project details"]);
             }
-            session()->flash('response', $response);
-            return redirect()->route('manage_listings');
+//            session()->flash('response', $response);
+//            return redirect()->route('manage_listings');
 
         } catch (\Exception $ex) {
             return $this->sendErrorResponse($ex);
@@ -906,10 +1254,11 @@ class ManageController extends Controller
         return $data;
     }
 
-    public function delete_unit_milestone($id)
+    public function delete_unit_milestone(Request $request)
     {
-        $paymentplan = Paymentplan::find($id)->delete();
-        return redirect()->back();
+        $paymentplan = Paymentplan::find($request->id);
+        $paymentplan ? $paymentplan->delete() : '';
+        return response()->json($paymentplan);
     }
 
     public function deleteunit(Request $request, $id, $parentId = null)
@@ -1346,6 +1695,41 @@ class ManageController extends Controller
         }
     }
 
+    public function deleteUnitAttachments(Request $request)
+    {
+        try {
+            $deleteUnitAttachments = ManageListings::where('id',$request->id)->first();
+            if($deleteUnitAttachments)
+            {
+                $pdf_or_excel = NULL;
+                foreach (json_decode($deleteUnitAttachments->pdf) as $key => $value)
+                {
+                    if($key == $request->key)
+                    {
+                        if (file_exists(public_path('/files/profile/'.$value)))
+                        {
+                            @unlink(public_path('/files/profile/'.$value));
+                        }
+                    }
+                    else
+                    {
+                        $pdf_or_excel[] = $value;
+                    }
+                }
+                $deleteUnitAttachments->pdf = $pdf_or_excel ? json_encode($pdf_or_excel) : NULL;
+                $deleteUnitAttachments->save();
+
+                return response()->json(['status' => 1, 'message' => 'Attachment delete successfully']);
+            }
+            else
+            {
+                return response()->json(['status' => 0, 'message' => 'Something went wrong!']);
+            }
+        } catch (\Exception $ex) {
+            return $this->sendErrorResponse($ex);
+        }
+    }
+
     public function unitremoveattachment(Request $request)
     {
         try {
@@ -1353,12 +1737,12 @@ class ManageController extends Controller
             if (!($multipleimages)) {
                 return $this->notFoundRequest('Attachment Not Found');
             }
-            if (json_decode($multipleimages->attachment_multiple, true)) {
-                if (file_exists(public_path('/project_attachment/' . $multipleimages->attachment_multiple))) {
-                    @unlink(public_path('/project_attachment/' . $multipleimages->attachment_multiple));
+            if($file = json_decode($multipleimages->attachment_multiple,true)){
+                if (file_exists(public_path('/project_attachment/'.$file))) {
+                    @unlink(public_path('/project_attachment/'.$file));
                 }
             }
-            $multipledata = $multipleimages->delete(['id' => $request->id]);
+            $multipledata = $multipleimages->delete(['id'=>$request->id]);
             if ($multipledata) {
                 if ($request->ajax()) {
                     $data['status'] = 1;
@@ -1367,7 +1751,7 @@ class ManageController extends Controller
                 }
             } else {
                 if ($request->ajax()) {
-                    $data['status'] = 0;
+                    $data['status']  = 0;
                     $data['message'] = "Failed to Delete Successfully";
                     return response()->json($data);
                 }
@@ -1437,64 +1821,64 @@ class ManageController extends Controller
         switch ($action) {
             case 'create':
                 $params = [
-                    'developer_id' => 'required',
+                    // 'developer_id' => 'required',
                     'project' => 'required',
                     // 'handover_year' => 'required',
                     // 'quarter' => 'required',
-                    'location' => 'required',
-                    'property' => 'required',
+                    // 'location' => 'required',
+                    // 'property' => 'required',
                     'size' => 'required',
                     'price' => 'required',
                     'bedrooms' => 'required',
-                    // 'bathrooms' => 'required',
+                    'bathrooms' => 'required',
                     // 'construction_status' => 'required',
                     // 'construction_date' => 'required',
-                    'community' => 'required',
-                    'subcommunity' => 'required',
-                    'title' => 'required',
-                    'description' => 'required',
+                    // 'community' => 'required',
+                    // 'subcommunity' => 'required',
+                    // 'title' => 'required',
+                    // 'description' => 'required',
                     // 'featuresList' => 'required',
 
                     'payment_plan' => 'required',
-                    'pre_handover_amount' => 'required_if:payment_plan,==,Yes',
-                    'handover_amount' => 'required_if:payment_plan,==,Yes',
-                    'post_handover_amount' => 'required_if:payment_plan,==,Yes',
+                    // 'pre_handover_amount' => 'required_if:payment_plan,==,Yes',
+                    // 'handover_amount' => 'required_if:payment_plan,==,Yes',
+                    // 'post_handover_amount' => 'required_if:payment_plan,==,Yes',
 
-                    'milestone.*.installment_terms' => 'required_if:payment_plan,==,Yes',
-                    'milestone.*.milestones' => 'required_if:payment_plan,==,Yes',
-                    'milestone.*.percentage' => 'required_if:payment_plan,==,Yes',
-                    'milestone.*.amount' => 'required_if:payment_plan,==,Yes',
+                    // 'milestone.*.installment_terms' => 'required_if:payment_plan,==,Yes',
+                    // 'milestone.*.milestones' => 'required_if:payment_plan,==,Yes',
+                    // 'milestone.*.percentage' => 'required_if:payment_plan,==,Yes',
+                    // 'milestone.*.amount' => 'required_if:payment_plan,==,Yes',
                 ];
                 break;
             case 'update':
                 $params = [
-                    'developer_id' => 'required',
+                    // 'developer_id' => 'required',
                     'project' => 'required',
                     // 'handover_year' => 'required',
                     // 'quarter' => 'required',
-                    'location' => 'required',
-                    'property' => 'required',
+                    // 'location' => 'required',
+                    // 'property' => 'required',
                     'size' => 'required',
                     'price' => 'required',
                     'bedrooms' => 'required',
-                    // 'bathrooms' => 'required',
+                    'bathrooms' => 'required',
                     // 'construction_status' => 'required',
                     // 'construction_date' => 'required',
-                    'community' => 'required',
-                    'subcommunity' => 'required',
-                    'title' => 'required',
-                    'description' => 'required',
+                    // 'community' => 'required',
+                    // 'subcommunity' => 'required',
+                    // 'title' => 'required',
+                    // 'description' => 'required',
                     // 'featuresList' => 'required',
 
                     'payment_plan' => 'required',
-                    'pre_handover_amount' => 'required_if:payment_plan,==,Yes',
-                    'handover_amount' => 'required_if:payment_plan,==,Yes',
-                    'post_handover_amount' => 'required_if:payment_plan,==,Yes',
+                    // 'pre_handover_amount' => 'required_if:payment_plan,==,Yes',
+                    // 'handover_amount' => 'required_if:payment_plan,==,Yes',
+                    // 'post_handover_amount' => 'required_if:payment_plan,==,Yes',
 
-                    'milestone.*.installment_terms' => 'required_if:payment_plan,==,Yes',
-                    'milestone.*.milestones' => 'required_if:payment_plan,==,Yes',
-                    'milestone.*.percentage' => 'required_if:payment_plan,==,Yes',
-                    'milestone.*.amount' => 'required_if:payment_plan,==,Yes',
+                    // 'milestone.*.installment_terms' => 'required_if:payment_plan,==,Yes',
+                    // 'milestone.*.milestones' => 'required_if:payment_plan,==,Yes',
+                    // 'milestone.*.percentage' => 'required_if:payment_plan,==,Yes',
+                    // 'milestone.*.amount' => 'required_if:payment_plan,==,Yes',
                 ];
                 break;
             case 'unitattachmentpost':

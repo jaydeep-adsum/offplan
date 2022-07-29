@@ -18,7 +18,7 @@ class ManageListings extends Model
      * @var array
      */
     protected $fillable = [
-     'user_id','developer_id', 'project', 'handover_year', 'quarter','community','subcommunity','location', 'up_to_handover', 'post_handover', 'latitude','longitude','property','size','price','bedrooms','bathrooms','rera_permit_no','construction_status','construction_date','title','description','features','image','floor_plan_image','video','pdf','payment_plan','index_key','pre_handover_amount','handover_amount','handover','milestone_price','rf_no','ready_status','sold_out_status','flag',
+     'user_id','developer_id', 'project_id', 'project', 'handover_year', 'quarter','community','subcommunity','location', 'up_to_handover', 'post_handover', 'latitude','longitude','property','size','price','bedrooms','bathrooms','rera_permit_no','construction_status','construction_date','title','description','features','image','floor_plan_image','video','pdf','payment_plan','index_key','pre_handover_amount','handover_amount','handover','milestone_price','rf_no','ready_status','sold_out_status','flag',
     ];
     public function developer()
     {
@@ -56,5 +56,15 @@ class ManageListings extends Model
     public function subcommunitys()
     {
         return $this->belongsTo(SubCommunity::class,'subcommunity');
+    }
+
+    public function manageProject()
+    {
+        return $this->hasOne('App\Models\ManageProject','id','project_id');
+    }
+
+    public function projectAssignAgents()
+    {
+        return $this->hasOne('App\Models\ProjectAssignAgents','project_id','project_id');
     }
 }
