@@ -4,9 +4,9 @@
     rel="stylesheet" />
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <style>
-    .swal2-popup 
-    { 
-        width: 507px !important; 
+    .swal2-popup
+    {
+        width: 507px !important;
     }
 </style>
 
@@ -67,7 +67,7 @@
                                     <select name="number_of_bedrooms" class="form-control select2" id="number_of_bedrooms">
                                         <option value="" selected >Select Bedrooms</option>
                                         <option value="Studio">Studio</option>
-                                        @for ($i = 1; $i <= 20; $i+=0.5) 
+                                        @for ($i = 1; $i <= 20; $i+=0.5)
                                             <option value="{{$i}}">{{$i}}</option>
                                         @endfor
                                     </select>
@@ -88,7 +88,7 @@
                                     </select>
                                 </div>
                                 <div class="input-group col-sm-3 mb-3">
-                                    <input type="number" name="handover_year" min='0' id="handover_year" class="form-control" placeholder="Enter Handover Year">    
+                                    <input type="number" name="handover_year" min='0' id="handover_year" class="form-control" placeholder="Enter Handover Year">
                                 </div>
                                 <div class="input-group col-3 mb-3">
                                     <select class="form-control select2" name="payment_plan" id="payment_plan">
@@ -238,6 +238,7 @@
             "language": {
                 processing: '<i class="fa fa-spinner fa-spin fa-3x fa-fw" style="color:#f1c63a;"></i><span class="sr-only"></span> ',
             },
+            "order": [[ 9, "desc" ]],
             contentType: 'application/json; charset=utf-8',
             ajax: {
                 url: "{{route('datatableManageProject')}}",

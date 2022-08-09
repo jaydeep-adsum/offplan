@@ -73,7 +73,7 @@
                                     Dubai, UAE
                                 </h6>
                                 <h6 style="color:#747474">
-                                    Property Type : {{$manage_listings['property']}}
+                                    Property Type : {{ $manage_listings->manageProject ? $manage_listings->manageProject->property : '-'}}
                                 </h6>
                             </div>
                             <div style="clear: both;"></div>

@@ -64,27 +64,27 @@ class ManageController extends Controller
             $permission = Permission_role_mapping::where('user_id', Auth::user()->id)->where('permissions_id', 5)->first();
             $past_date = Carbon\Carbon::now()->subdays(90);
             if ($request->status == 'listing') {
-                $query = ManageListings::with('developer', 'notes', 'reminder', 'communitys', 'subcommunitys','manageProject','projectAssignAgents')->where(['ready_status' => 0, 'sold_out_status' => 0])->orderBy('updated_at', 'desc');
+                $query = ManageListings::with('developer', 'notes', 'reminder', 'communitys', 'subcommunitys','manageProject','projectAssignAgents')->where(['ready_status' => 0, 'sold_out_status' => 0]);
                 if (Auth::user()->role == 3) {
-                    $data->where('updated_at', '>=', $past_date);
+                    $query->where('updated_at', '>=', $past_date);
                 }
                 $copyUnitRoute = 'copy-unit';
                 $previewUnit = 'preview-unit';
             } else if ($request->status == 'ready_listing') {
-                $query = ManageListings::with('developer', 'notes', 'reminder', 'communitys', 'subcommunitys','manageProject','projectAssignAgents')->where(['ready_status' => 1, 'sold_out_status' => 0])->orderBy('updated_at', 'desc');
+                $query = ManageListings::with('developer', 'notes', 'reminder', 'communitys', 'subcommunitys','manageProject','projectAssignAgents')->where(['ready_status' => 1, 'sold_out_status' => 0]);
                 if (Auth::user()->role == 3) {
-                    $data->where('updated_at', '>=', $past_date);
+                    $query->where('updated_at', '>=', $past_date);
                 }
                 $copyUnitRoute = 'ready-copy-unit';
                 $previewUnit = 'ready-preview-unit';
             } else if ($request->status == 'sold_out_listing') {
-                $query = ManageListings::with('developer', 'notes', 'reminder', 'communitys', 'subcommunitys','manageProject','projectAssignAgents')->where('sold_out_status', 1)->orderBy('updated_at', 'desc');
+                $query = ManageListings::with('developer', 'notes', 'reminder', 'communitys', 'subcommunitys','manageProject','projectAssignAgents')->where('sold_out_status', 1);
                 $copyUnitRoute = 'sold-out-copy-unit';
                 $previewUnit = 'sold-out-preview-unit';
             } else if ($request->status == 'outdated_listing') {
                 $query = ManageListings::with('developer', 'notes', 'communitys', 'subcommunitys','manageProject','projectAssignAgents')->whereHas('reminder', function ($query) {
                     $query->whereDate('reminder_date', '<=', Carbon\Carbon::now('Europe/Stockholm'))->where('status', 0);
-                })->orderBy('updated_at', 'desc');
+                });
                 $copyUnitRoute = 'outdated-copy-unit';
                 $previewUnit = 'outdated-preview-unit';
             }
@@ -329,9 +329,9 @@ class ManageController extends Controller
                     $name = ($row->notes && $row->developer) ? $row->developer->company : '';
                     $reminderlist = $row->reminder ? $row->reminder : '';
                     if ($permission) {
-                        $preview_html = '<div class="col-6"><a href="' . route('preview-unit', ['id' => $row->id]) . '"><i class="fas fa-eye" data-toggle="tooltip" data-placement="bottom" title="Preview"></i></a></div>';
+                        $preview_html = '<div class="col-6"><a href="' . route($previewUnit, ['id' => $row->id]) . '"><i class="fas fa-eye" data-toggle="tooltip" data-placement="bottom" title="Preview"></i></a></div>';
 
-                        $copy_html = '<div class="col-6"><a href="' . route('copy-unit', ['id' => $row->id]) . '" target="_blank"><i class="fas fa-copy" data-toggle="tooltip" data-placement="bottom" title="Copy"></i></a></div>';
+                        $copy_html = '<div class="col-6"><a href="' . route($copyUnitRoute, ['id' => $row->id]) . '" target="_blank"><i class="fas fa-copy" data-toggle="tooltip" data-placement="bottom" title="Copy"></i></a></div>';
 
                         $note_html = '<div class="col-6"><a class="user_dialog" data-toggle="modal" data-target="#imageModal" data-listid="' . $row->id . '" data-notelist="' . $notes . '" data-name="' . $name . '"><i style="color: #0080ff" class="fas fa-sticky-note mt-2" data-toggle="tooltip"data-placement="bottom" title="Note"></i></a></div>';
 
@@ -625,9 +625,20 @@ class ManageController extends Controller
         $decryption_key = "123456";
         $user_id = openssl_decrypt($userid, $encryption, $decryption_key, $options, $decryption_userid);
 
-        $manage_listings = ManageListings::with('developer','paymentplan')->where('id',$id)->first();
-        $community=Community::orderBy('name')->where('id',$manage_listings->community)->get();
-        $subcommunity=Subcommunity::orderBy('name')->where('id',$manage_listings->subcommunity)->get();
+        $manage_listings = ManageListings::with('developer','paymentplan','manageProject')->where('id',$id)->first();
+        $community = '';
+        $subcommunity = '';
+        $user_data = NULL;
+        if($manage_listings->project_id)
+        {
+            if($manage_listings->manageProject)
+            {
+                $community = Community::where('id',$manage_listings->manageProject->community)->first();
+                $subcommunity = Subcommunity::where('id',$manage_listings->manageProject->subcommunity)->first();
+            }
+        }
+//        $community=Community::orderBy('name')->where('id',$manage_listings->community)->get();
+//        $subcommunity=Subcommunity::orderBy('name')->where('id',$manage_listings->subcommunity)->get();
         $user_data = User::where('id',$user_id)->first();
 
         return view('Admin.view_project',compact('manage_listings','community','subcommunity','user_data'));
@@ -826,30 +837,30 @@ class ManageController extends Controller
                 }
             }
 
-//            if ($request->hasfile('filesList')) {
-//                foreach ($request->file('filesList') as $file) {
-//                    $mimeType = $file->getMimeType();
-//                    if (!$mimeType) {
-//                        if ($request->ajax()) {
-//                            $data['status'] = 0;
-//                            $data['message'] = $errorMessage;
-//
-//                            return response()->json($data);
-//                        }
-//                    }
-//                    if ($mimeType == "inode/x-empty" || $mimeType == "application/x-empty") {
-//                        $image_name = $file->getClientOriginalName();
-//                    } else {
-//                        $image_name = time() . '-' . $file->getClientOriginalName();
-//                        $img = Image::make($file->getRealPath())->resize(600, 400);
-////                        $watermark = Image::make('public/files/logo.png');
-////                        $img->insert($watermark, 'center', 5, 5);
-//                        $img->save('public/files/profile/' . $image_name);
-//                    }
-//                    $data[] = $image_name;
-//                }
-//                $input['image'] = json_encode($data);
-//            }
+            if ($request->hasfile('filesList')) {
+                foreach ($request->file('filesList') as $file) {
+                    $mimeType = $file->getMimeType();
+                    if (!$mimeType) {
+                        if ($request->ajax()) {
+                            $data['status'] = 0;
+                            $data['message'] = $errorMessage;
+
+                            return response()->json($data);
+                        }
+                    }
+                    if ($mimeType == "inode/x-empty" || $mimeType == "application/x-empty") {
+                        $image_name = $file->getClientOriginalName();
+                    } else {
+                        $image_name = time() . '-' . $file->getClientOriginalName();
+                        $img = Image::make($file->getRealPath())->resize(600, 400);
+//                        $watermark = Image::make('public/files/logo.png');
+//                        $img->insert($watermark, 'center', 5, 5);
+                        $img->save('public/files/profile/' . $image_name);
+                    }
+                    $data[] = $image_name;
+                }
+                $input['image'] = json_encode($data);
+            }
 
             if($request->hasfile('floor_plan_image'))
             {

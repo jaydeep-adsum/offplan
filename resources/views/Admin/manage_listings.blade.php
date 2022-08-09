@@ -283,6 +283,7 @@
             "language": {
                 processing: '<i class="fa fa-spinner fa-spin fa-3x fa-fw" style="color:#f1c63a;"></i><span class="sr-only"></span> ',
             },
+            "order": [[ 14, "desc" ]],
             dom: 'Bfrtip',
             buttons: [{
                     extend: 'excelHtml5',

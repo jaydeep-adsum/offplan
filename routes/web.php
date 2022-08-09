@@ -47,6 +47,7 @@ Route::group(['middleware' => 'auth'], function() {
 		Route::post('changeProjectReminderStatus','ManageProjectController@changeProjectReminderStatus')->name('changeProjectReminderStatus');
 
 		Route::post('addAssignProject','ManageProjectController@addAssignProject')->name('addAssignProject');
+        Route::post('datatableUnitUnderProject','ManageProjectController@datatableUnitUnderProject')->name('datatableUnitUnderProject');
 	});
 
 	Route::group(['prefix' => 'manage_ready_project'], function(){

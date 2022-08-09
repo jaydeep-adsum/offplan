@@ -25,7 +25,7 @@
             </div>
         </div>
         <div class="col mt-3 text-dark">
-            @if (Auth::user()->role == 1)     
+            @if (Auth::user()->role == 1)
                 @if(Request::segment(2) == "previewProject")
                 <a href="{{ route('editProject', ['id' => $manage_project['id']]) }}" class="btn btn-success"
                     style="font-size: 12px;" target="_blank">Edit Page</a>
@@ -258,6 +258,24 @@
                 </div>
             </div>
             @endif
+            <div class="card">
+                <div class="card-header header">
+                    <span class="project-reminder m-0">Unit Details</span>
+                </div>
+                <div class="card-body">
+                    <table style="font-size: .9rem" class="table table-striped table-hover datatableUnitUnderProject">
+                        <thead>
+                        <tr>
+                            <th>Reference Number</th>
+                            <th>Bedroom</th>
+                            <th>Size(Sq.ft)</th>
+                            <th>Price(AED)</th>
+                            <th>View</th>
+                        </tr>
+                        </thead>
+                    </table>
+                </div>
+            </div>
         </div>
         <div class="col-lg-4 col-md-5 col-12">
             <div class="card mt-3 mt-md-0">
@@ -349,7 +367,7 @@
                                                     @else
                                                         <span>Added On {{\Carbon\Carbon::parse($item->created_at)->format('d-M-Y g:i A')}}</span>
                                                     @endif
-                                                    
+
                                                     <div style="display:inline;float:right;">
                                                         <button data-toggle="tooltip" data-placement="bottom" title="Edit" data-id="{{$item->id}}" class="btn p-0 editReminder" onclick="editReminder({{$item->id}}, this)" type="button" style="float: right; font-size: initial;"><i class="fas fa-edit"></i></button>
                                                     </div>
@@ -357,14 +375,14 @@
                                                         <input type="checkbox" class="custom-control-input" id="customSwitch{{$item->id}}" data-id="{{$item->id}}" onclick="fn_project_reminder_status_changes(this)" value="1" {{($item->status)?'checked':''}}>
                                                         <label class="custom-control-label" for="customSwitch{{$item->id}}"></label>
                                                     </div>
-                                                    
+
                                                     @if($item->reminder_date <= \Carbon\Carbon::now()->toDateString() )
                                                         <br><button style="background-color: #8B2323;color:white; border-top-right-radius: initial;" class="mt-2 mb-2">Date Time gone</button>
                                                     @else
                                                         {{-- <br><button style="background-color: rgb(63, 159, 223); color:white; border-top-right-radius: initial;" class="mt-2 mb-2">Future Date</button> --}}
                                                     @endif
                                                 @else
-                                                -    
+                                                -
                                                 @endif
                                             </span>
                                             <br>
@@ -423,6 +441,53 @@
 @endsection
 @section('scripts')
 <script>
+    $(function () {
+        var table = $('.datatableUnitUnderProject').DataTable({
+            processing: true,
+            serverSide: true,
+            destroy: true,
+            searching: false,
+            "bPaginate": false,
+            "bLengthChange": false,
+            "bFilter": true,
+            "bInfo": false,
+            "bAutoWidth": false,
+            "language": {
+                processing: '<i class="fa fa-spinner fa-spin fa-3x fa-fw" style="color:#f1c63a;"></i><span class="sr-only"></span> ',
+            },
+            contentType: 'application/json; charset=utf-8',
+            ajax: {
+                url: "{{route('datatableUnitUnderProject')}}",
+                type: "POST",
+                data: function (d) {
+                    d._token = '{{csrf_token()}}',
+                        d.project_id = '{{$manage_project["id"]}}';
+                }
+            },
+            columns: [{
+                data: 'rf_no',
+                name: 'rf_no'
+            },
+                {
+                    data: 'bedrooms',
+                    name: 'bedrooms'
+                },
+                {
+                    data: 'size',
+                    name: 'size'
+                },
+                {
+                    data: 'price',
+                    name: 'price'
+                },
+                {
+                    data: 'view',
+                    name: 'view'
+                }
+            ]
+        });
+    });
+
     $(function () {
         $('[data-toggle="tooltip"]').tooltip()
     });

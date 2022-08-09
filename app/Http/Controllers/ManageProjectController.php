@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Developer;
 use App\Models\LocalImage;
+use App\Models\ManageListings;
 use App\Models\ManageProject;
 use App\Models\Features;
 use App\Models\Milestones;
@@ -50,30 +51,114 @@ class ManageProjectController extends Controller
             {
                 $editRoute = 'editReadyProject';
                 $previewRoute = 'previewReadyProject';
-                $data = ManageProject::with('developer','projectBedrooms','communitys','projectReminders','projectAssignAgents.user')->where(['ready_status' => 1 , 'sold_out_status' => 0])->orderBy('updated_at', 'desc');
+                $query = ManageProject::with('developer','projectBedrooms','communitys','projectReminders','projectAssignAgents.user')->where(['ready_status' => 1 , 'sold_out_status' => 0]);
             }
             else if($request->page_status == "manage_sold_out_project")
             {
                 $editRoute = 'editSoldOutProject';
                 $previewRoute = 'previewSoldOutProject';
-                $data = ManageProject::with('developer','projectBedrooms','communitys','projectReminders','projectAssignAgents.user')->where('sold_out_status',1)->orderBy('updated_at', 'desc');
+                $query = ManageProject::with('developer','projectBedrooms','communitys','projectReminders','projectAssignAgents.user')->where('sold_out_status',1);
             }
             else if($request->page_status == "manage_overdue_project")
             {
                 $editRoute = 'editOverdueProject';
                 $previewRoute = 'previewOverdueProject';
-                $data = ManageProject::with('developer','projectBedrooms','communitys','projectReminders','projectAssignAgents.user')->whereHas('projectReminders',function($query){
+                $query = ManageProject::with('developer','projectBedrooms','communitys','projectReminders','projectAssignAgents.user')->whereHas('projectReminders',function($query){
                     $query->whereDate('reminder_date','<=',Carbon\Carbon::now('Europe/Stockholm'))->where('status',0);
+                });
+            } else if($request->page_status == "manage_project")
+            {
+                $editRoute = 'editProject';
+                $previewRoute = 'previewProject';
+                $query = ManageProject::with('developer','projectBedrooms','communitys','projectReminders','projectAssignAgents.user')->where(['ready_status' => 0 , 'sold_out_status' => 0]);
+            }
+            $input = $this->objectToArray($request->all());
+
+            if(isset($input['company'])){
+                $company = $input['company'];
+                $query = $query->whereHas('developer',function($query)use($company){
+                    $query->where('company',$company);
+                });
+            }
+            if(isset($input['project'])){
+                $query = $query->where('project',$input['project']);
+            }
+            if(isset($input['community'])){
+                $query = $query->where('community',$input['community']);
+            }
+            if(isset($input['property'])){
+                $query = $query->where('property',$input['property']);
+            }
+            if(isset($input['project_status']))
+            {
+                $query = $query->where('completion_status',$input['project_status']);
+
+                if($input['project_status'] == 2)
+                {
+                    if(isset($input['quarter'])){
+                        $query = $query->where('quarter',$input['quarter'] );
+                    }
+                    if(isset($input['handover_year'])){
+                        $query = $query->where('handover_year',$input['handover_year'] );
+                    }
+                }
+            }
+            else
+            {
+                if(isset($input['quarter'])){
+                    $query = $query->where('quarter',$input['quarter'] );
+                }
+                if(isset($input['handover_year'])){
+                    $query = $query->where('handover_year',$input['handover_year'] );
+                }
+            }
+            if(isset($input['payment_plan'])){
+                $query = $query->where('payment_plan',$input['payment_plan']);
+            }
+            if(isset($input['assigned_agents'])){
+                $agent = $input['assigned_agents'];
+                $query = $query->whereHas('projectAssignAgents',function($query)use($agent){
+                    $query->where('agent_id',$agent);
+                });
+            }
+            if(isset($input['number_of_bedrooms'])){
+                $number_of_bedrooms = $input['number_of_bedrooms'];
+                $query = $query->whereHas('projectBedrooms',function($query)use($number_of_bedrooms){
+                    $query->where('bed_rooms',$number_of_bedrooms);
+                });
+            }
+            if(isset($input['min_price']) && isset($input['max_price']))
+            {
+                $min_price = $input['min_price'];
+                $max_price = $input['max_price'];
+                $query = $query->whereHas('projectBedrooms',function($query)use($min_price, $max_price){
+                    $query->whereBetween('min_price', [$min_price, $max_price])->orWhereBetween('max_price', [$min_price, $max_price]);
                 });
             }
             else
             {
-                $editRoute = 'editProject';
-                $previewRoute = 'previewProject';
-                $data = ManageProject::with('developer','projectBedrooms','communitys','projectReminders','projectAssignAgents.user')->where(['ready_status' => 0 , 'sold_out_status' => 0])->orderBy('updated_at', 'desc');
+                if(isset($input['min_price']) || isset($input['max_price']))
+                {
+                    if(isset($input['min_price']))
+                    {
+                        $min_price = $input['min_price'];
+                        $query = $query->whereHas('projectBedrooms',function($query)use($min_price){
+                            $query->where('min_price', '>=', $min_price);
+                        });
+                    }
+                    else
+                    {
+                        $max_price = $input['max_price'];
+                        $query = $query->whereHas('projectBedrooms',function($query)use($max_price){
+                            $query->where('max_price', '<=', $max_price);
+                        });
+                    }
+                }
             }
 
-            return Datatables::eloquent($data)
+            $data = $query->get();
+
+            return Datatables::of($data)
                 ->addIndexColumn()
                 ->addColumn('active', function ($row) {
                     $class = 0;
@@ -109,15 +194,53 @@ class ManageProjectController extends Controller
                 ->addColumn('location', function($row){
                     return $row->communitys ? $row->communitys->name.', Dubai, UAE' : ', Dubai, UAE';
                 })
-                ->addColumn('completion_status', function($row){
-                    if($row->completion_status == 1)
+                ->addColumn('completion_status', function($row) use ($request) {
+                    if($row->completion_status)
                     {
-                        return 'Ready';
+                        if($row->completion_status == 1)
+                        {
+                            if($request->page_status == 'manage_project')
+                            {
+                                return 'Ready to Move In';
+                            }
+                            else if($request->page_status == 'manage_ready_project')
+                            {
+                                return 'Ready to Move';
+                            }
+                            else
+                            {
+                                return 'Ready';
+                            }
+                        }
+
+                        if($row->completion_status == 2)
+                        {
+                            return ($row->quarter && $row->handover_year) ? $row->quarter .', '. $row->handover_year : '-';
+                        }
                     }
                     else
                     {
-                        return ($row->quarter && $row->handover_year) ? $row->quarter .', '. $row->handover_year : '-';
+                        if($row->ready_status)
+                        {
+                            if($request->page_status == 'manage_project')
+                            {
+                                return 'Ready to Move In';
+                            }
+                            else if($request->page_status == 'manage_ready_project')
+                            {
+                                return 'Ready to Move';
+                            }
+                            else
+                            {
+                                return 'Ready';
+                            }
+                        }
+                        else
+                        {
+                            return ($row->quarter && $row->handover_year) ? $row->quarter .', '. $row->handover_year : '-';
+                        }
                     }
+                    return '-';
                 })
                 ->addColumn('price_range', function($row){
                     $bed = array();
@@ -142,7 +265,7 @@ class ManageProjectController extends Controller
                     return $row->payment_plan_comments ? $row->payment_plan_comments : '-';
                 })
                 ->addColumn('updated_at', function($row){
-                    return $row->updated_at ? date('d-M-y',strtotime($row->updated_at)) : '-';
+                    return $row->updated_at ? $row->updated_at : '-';
                 })
                 ->addColumn('action', function($row) use($editRoute, $previewRoute){
 
@@ -255,92 +378,6 @@ class ManageProjectController extends Controller
                             </div>';
                     }
 
-                })
-                ->filter(function ($query) use ($request) {
-
-                    $input = $this->objectToArray($request->all());
-
-                    if(isset($input['company'])){
-                        $company = $input['company'];
-                        $query = $query->whereHas('developer',function($query)use($company){
-                            $query->where('company',$company);
-                        });
-                    }
-                    if(isset($input['project'])){
-                        $query = $query->where('project',$input['project']);
-                    }
-                    if(isset($input['community'])){
-                        $query = $query->where('community',$input['community']);
-                    }
-                    if(isset($input['property'])){
-                        $query = $query->where('property',$input['property']);
-                    }
-                    if(isset($input['project_status']))
-                    {
-                        $query = $query->where('completion_status',$input['project_status']);
-
-                        if($input['project_status'] == 2)
-                        {
-                            if(isset($input['quarter'])){
-                                $query = $query->where('quarter',$input['quarter'] );
-                            }
-                            if(isset($input['handover_year'])){
-                                $query = $query->where('handover_year',$input['handover_year'] );
-                            }
-                        }
-                    }
-                    else
-                    {
-                        if(isset($input['quarter'])){
-                            $query = $query->where('quarter',$input['quarter'] );
-                        }
-                        if(isset($input['handover_year'])){
-                            $query = $query->where('handover_year',$input['handover_year'] );
-                        }
-                    }
-                    if(isset($input['payment_plan'])){
-                        $query = $query->where('payment_plan',$input['payment_plan']);
-                    }
-                    if(isset($input['assigned_agents'])){
-                        $agent = $input['assigned_agents'];
-                        $query = $query->whereHas('projectAssignAgents',function($query)use($agent){
-                            $query->where('agent_id',$agent);
-                        });
-                    }
-                    if(isset($input['number_of_bedrooms'])){
-                        $number_of_bedrooms = $input['number_of_bedrooms'];
-                        $query = $query->whereHas('projectBedrooms',function($query)use($number_of_bedrooms){
-                            $query->where('bed_rooms',$number_of_bedrooms);
-                        });
-                    }
-                    if(isset($input['min_price']) && isset($input['max_price']))
-                    {
-                        $min_price = $input['min_price'];
-                        $max_price = $input['max_price'];
-                        $query = $query->whereHas('projectBedrooms',function($query)use($min_price, $max_price){
-                            $query->whereBetween('min_price', [$min_price, $max_price])->orWhereBetween('max_price', [$min_price, $max_price]);
-                        });
-                    }
-                    else
-                    {
-                        if(isset($input['min_price']) || isset($input['max_price']))
-                        {
-                            if(isset($input['min_price']))
-                            {
-                                $min_price = $input['min_price'];
-                                $query = $query->whereHas('projectBedrooms',function($query)use($min_price){
-                                    $query->where('min_price', '>=', $min_price);
-                                });
-                            }
-                            else
-                            {
-                                $max_price = $input['max_price'];
-                                $query = $query->whereHas('projectBedrooms',function($query)use($max_price){
-                                    $query->where('max_price', '<=', $max_price);
-                                });
-                            }
-                        }
-                    }
                 })
                 ->rawColumns(['rf_no','project','developer_company','communitys','completion_status','price_range','updated_at','action'])
                 ->make(true);
@@ -1341,6 +1378,33 @@ class ManageProjectController extends Controller
                 return response()->json(['status' => 0, 'message' => 'Something went wrong!']);
             }
 
+        } catch (\Exception $ex) {
+            return $this->sendErrorResponse($ex);
+        }
+    }
+    public function datatableUnitUnderProject(Request $request)
+    {
+        try {
+            $data = ManageListings::where('project_id',$request->project_id)->get();
+
+            return Datatables::of($data)
+                ->addColumn('rf_no', function($row){
+                    return $row->rf_no ? $row->rf_no : '-';
+                })
+                ->addColumn('bedrooms', function($row){
+                    return $row->bedrooms ? $row->bedrooms : '-';
+                })
+                ->addColumn('size', function($row){
+                    return $row->size ? $row->size : '-';
+                })
+                ->addColumn('price', function($row){
+                    return $row->price ? number_format($row->price,2, '.', ',') : '0';
+                })
+                ->addColumn('view', function($row){
+                    return '<a href="'. route('view-unit', ['id' => $row->id,'userid'=>Auth::id()]) .'" target="_blank"><i style="color: green;" class="fas fa-eye mr-3" data-toggle="tooltip" data-placement="bottom" title="View"></i></a>';
+                })
+                ->rawColumns(['rf_no','bedrooms','size','price','view'])
+                ->make(true);
         } catch (\Exception $ex) {
             return $this->sendErrorResponse($ex);
         }
